@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
@@ -18,25 +16,6 @@ export async function POST(request: Request) {
     }
 
     const userId = user.id;
-
-    const client = await prisma.client.create({
-      data: {
-        userId,
-        name,
-        cpf,
-        whatsapp,
-        address,
-        photoUrl,
-        city,
-        state,
-        observations,
-      },
-    });
-
-
-    if (!userId || !name || !whatsapp || !address || !city || !state) {
-      return NextResponse.json({ message: 'Missing required fields: userId, name, whatsapp, address, city, state' }, { status: 400 });
-    }
 
     const client = await prisma.client.create({
       data: {
