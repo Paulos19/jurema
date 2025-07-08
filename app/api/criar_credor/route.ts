@@ -4,15 +4,21 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
-    const { email, cpf, password, whatsapp, pixKey, city, state } = await request.json();
+    const { masterKey, email, cpf, password, whatsapp, pixKey, city, state } = await request.json();
+
+    // ATENÇÃO: A chave mestra está hardcoded. Para produção, use variáveis de ambiente.
+    const CHAVE_MESTRA_VALIDA = process.env.CHAVE_MESTRA;
+
+    if (masterKey !== CHAVE_MESTRA_VALIDA) {
+      return NextResponse.json({ message: 'Token inválido.' }, { status: 401 });
+    }
 
     if (!email || !cpf || !password || !whatsapp || !pixKey || !city || !state) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ message: 'Todos os campos, exceto o token, são obrigatórios.' }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate a unique code for the user
     const generateUniqueCode = (length: number = 8) => {
       const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0987654321';
       let result = '';
@@ -38,13 +44,13 @@ export async function POST(request: Request) {
         pixKey,
         city,
         state,
-        uniqueCode, // Add the generated unique code
+        uniqueCode,
       },
     });
 
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }
