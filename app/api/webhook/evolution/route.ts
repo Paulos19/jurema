@@ -38,6 +38,7 @@ export async function POST(req: Request) {
               },
               body: JSON.stringify({
                 command: '/criar_cliente',
+                serverUrl: body.server_url,
                 sender: sender,
               }),
             });
