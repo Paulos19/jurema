@@ -25,6 +25,31 @@ export async function POST(req: Request) {
         const messageContent = message.conversation || message.extendedTextMessage?.text || '';
         const fromMe = key.fromMe; // true se a mensagem foi enviada pelo bot, false caso contrário
 
+        // Verifica se é o comando /criar_cliente
+        if (messageContent.startsWith('/criar_cliente')) {
+          console.log(`Comando /criar_cliente detectado de ${sender}. Acionando webhook do n8n AI.`);
+          
+          // Aciona o webhook do n8n para o agente de IA
+          try {
+            await fetch('https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                command: '/criar_cliente',
+                sender: sender,
+                // Você pode adicionar mais dados aqui se precisar
+              }),
+            });
+            console.log('Webhook do n8n AI acionado com sucesso.');
+          } catch (fetchError) {
+            console.error('Erro ao acionar o webhook do n8n AI:', fetchError);
+          }
+          // Não salva o comando no banco de dados como uma mensagem normal
+          continue; 
+        }
+
         // Salva a mensagem no banco de dados se houver conteúdo.
         if (sender && messageContent) {
           await prisma.message.create({

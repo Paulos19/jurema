@@ -1,0 +1,26 @@
+{
+  "errorMessage": "A 'json' property isn't an object [item 0]",
+  "errorDescription": "In the returned data, every key named 'json' must point to an object.",
+  "errorDetails": {},
+  "n8nDetails": {
+    "nodeName": "Code",
+    "nodeType": "n8n-nodes-base.code",
+    "nodeVersion": 2,
+    "itemIndex": 0,
+    "n8nVersion": "1.100.1 (Self Hosted)",
+    "binaryDataMode": "default",
+    "stackTrace": [
+      "Error: A 'json' property isn't an object [item 0]",
+      "    at JavaScriptSandbox.validateItem (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/Code/Sandbox.ts:165:10)",
+      "    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/Code/Sandbox.ts:145:44",
+      "    at VM2 Wrapper.apply (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+vm2@3.9.25/node_modules/@n8n/vm2/lib/bridge.js:490:11)",
+      "    at Array.forEach (<anonymous>)",
+      "    at VM2 Wrapper.apply (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+vm2@3.9.25/node_modules/@n8n/vm2/lib/bridge.js:490:11)",
+      "    at JavaScriptSandbox.validateRunCodeAllItems (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/Code/Sandbox.ts:145:14)",
+      "    at JavaScriptSandbox.runCodeAllItems (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/Code/JavaScriptSandbox.ts:98:15)",
+      "    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/Code/Code.node.ts:155:14)",
+      "    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_openai@4.103.0_encoding@0.1.13_ws@8.17.1_zod@3.25.67_/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1193:9)",
+      "    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_openai@4.103.0_encoding@0.1.13_ws@8.17.1_zod@3.25.67_/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1542:27"
+    ]
+  }
+}
