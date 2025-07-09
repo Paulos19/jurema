@@ -3,7 +3,7 @@
     "headers": {
       "host": "n8n-n8n.qqfurw.easypanel.host",
       "user-agent": "axios/1.7.9",
-      "content-length": "787",
+      "content-length": "797",
       "accept-encoding": "gzip, compress, deflate, br",
       "content-type": "application/json",
       "x-forwarded-for": "172.18.0.1",
@@ -22,25 +22,25 @@
         "key": {
           "remoteJid": "556186446934@s.whatsapp.net",
           "fromMe": true,
-          "id": "CD6E0038DEFA1D9B06D654C327D8A866"
+          "id": "5252CFC1FDB6339420BA0A46A5773CAB"
         },
         "pushName": "Henrique",
         "status": "SERVER_ACK",
         "message": {
-          "conversation": "Olá"
+          "conversation": "/criar_cliente"
         },
         "contextInfo": {
           "entryPointConversionSource": "global_search_new_chat",
           "entryPointConversionApp": "whatsapp",
-          "entryPointConversionDelaySeconds": 580433
+          "entryPointConversionDelaySeconds": 583477
         },
         "messageType": "conversation",
-        "messageTimestamp": 1752068153,
+        "messageTimestamp": 1752071196,
         "instanceId": "6e45cbed-aca2-4e96-a5d7-0cad76e813d3",
         "source": "android"
       },
       "destination": "https://n8n-n8n.qqfurw.easypanel.host/webhook/mensagens",
-      "date_time": "2025-07-09T10:35:53.345Z",
+      "date_time": "2025-07-09T11:26:37.007Z",
       "sender": "556186446934@s.whatsapp.net",
       "server_url": "https://evolution-evolution.qqfurw.easypanel.host",
       "apikey": "75EEB594B867-40E1-959D-623FE25140BC"

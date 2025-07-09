@@ -2,14 +2,20 @@
 const sender = items[0].json.sender;
 const instance = items[0].json.instance;
 const apiKey = items[0].json.apiKey;
+const pushName = items[0].json.pushName;
+const messageId = items[0].json.messageId;
+const messageTimestamp = items[0].json.messageTimestamp;
 
-const aiMessage = `Olá! Para criar um novo cliente, por favor, me informe o nome completo e o CPF.`;
+const aiMessage = `Olá ${pushName}! Para criar um novo cliente, por favor, me informe o nome completo e o CPF.`;
 
 return [{
   json: {
     sender: sender,
     instance: instance,
     apiKey: apiKey,
+    pushName: pushName,
+    messageId: messageId,
+    messageTimestamp: messageTimestamp,
     message: aiMessage
   }
 }];
@@ -21,12 +27,16 @@ return [{
 // const clientCpf = items[0].json.clientCpf;
 // const instance = items[0].json.instance;
 // const apiKey = items[0].json.apiKey;
+// const sender = items[0].json.sender;
+// const pushName = items[0].json.pushName;
 //
 // return [{
 //   json: {
 //     name: clientName,
 //     cpf: clientCpf,
 //     instance: instance,
-//     apiKey: apiKey
+//     apiKey: apiKey,
+//     sender: sender,
+//     pushName: pushName
 //   }
 // }];
