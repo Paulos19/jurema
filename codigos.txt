@@ -1,0 +1,32 @@
+--- n8n Code Node: Simular Resposta da IA ---
+const sender = items[0].json.sender;
+const instance = items[0].json.instance;
+const apiKey = items[0].json.apiKey;
+
+const aiMessage = `Olá! Para criar um novo cliente, por favor, me informe o nome completo e o CPF.`;
+
+return [{
+  json: {
+    sender: sender,
+    instance: instance,
+    apiKey: apiKey,
+    message: aiMessage
+  }
+}];
+
+--- n8n Code Node: Formatar Payload para API criar_cliente (Placeholder) ---
+// Este é um placeholder. O código real será adicionado quando a IA coletar os dados.
+// Exemplo de como o código pode ser:
+// const clientName = items[0].json.clientName;
+// const clientCpf = items[0].json.clientCpf;
+// const instance = items[0].json.instance;
+// const apiKey = items[0].json.apiKey;
+//
+// return [{
+//   json: {
+//     name: clientName,
+//     cpf: clientCpf,
+//     instance: instance,
+//     apiKey: apiKey
+//   }
+// }];
