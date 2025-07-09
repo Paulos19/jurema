@@ -1,0 +1,88 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "webhookId": "your-webhook-id"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/user/{{$json.body.uniqueCode}}",
+        "method": "GET",
+        "options": {}
+      },
+      "name": "Get User by Unique Code",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "b2c3d4e5-f6a7-8901-2345-67890abcdef0"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/conversation",
+        "method": "POST",
+        "body": {
+          "userId": "={{$node[`Get User by Unique Code`].json[`id`]}}",
+          "clientWhatsapp": "={{$json.body.from}}",
+          "status": "IDLE",
+          "currentStep": "ask_name"
+        },
+        "options": {}
+      },
+      "name": "Create Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "c3d4e5f6-a7b8-9012-3456-7890abcdef01"
+    },
+    {
+      "parameters": {
+        "url": "YOUR_EVOLUTION_API_URL/message/sendText/YOUR_INSTANCE_NAME",
+        "method": "POST",
+        "body": {
+          "number": "={{$json.body.from}}",
+          "textMessage": {
+            "text": "Olá! Para iniciar o cadastro, qual é o seu nome completo?"
+          }
+        },
+        "options": {}
+      },
+      "name": "Send Welcome Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "d4e5f6a7-b8c9-0123-4567-890abcdef02"
+    }
+  ],
+  "connections": {
+    "Webhook": [
+      [
+        {
+          "node": "Get User by Unique Code",
+          "type": "main"
+        }
+      ]
+    ],
+    "Get User by Unique Code": [
+      [
+        {
+          "node": "Create Conversation",
+          "type": "main"
+        }
+      ]
+    ],
+    "Create Conversation": [
+      [
+        {
+          "node": "Send Welcome Message",
+          "type": "main"
+        }
+      ]
+    ]
+  }
+}
