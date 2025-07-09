@@ -1,0 +1,16 @@
+Webhook da Evolution API recebido: {
+  "event": "messages.upsert",
+  "data": {
+    "key": {
+      "remoteJid": "556186446934@s.whatsapp.net",
+      "fromMe": true,
+      "id": "CE93C90E38A8805791E8C56F7E52A4ED"
+    },
+    "message": {
+      "conversation": "/criar_cliente"
+    }
+  }
+}
+
+Comando /criar_cliente detectado de 556186446934@s.whatsapp.net. Acionando webhook do n8n AI.
+Webhook do n8n AI acionado com sucesso com o payload completo e enriquecido.

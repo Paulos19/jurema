@@ -40,8 +40,13 @@ export async function POST(req: Request) {
             // Dados que extraímos do payload recebido:
             event: payload.event,
             sender: sender,
-            data: payload.data,
-            
+            data: payload.data, // Mantém o objeto de dados completo
+
+            // Extrai e inclui explicitamente para facilitar o acesso no n8n
+            pushName: payload.data?.pushName,
+            messageId: payload.data?.key?.id,
+            messageTimestamp: payload.data?.messageTimestamp,
+
             // Dados que podem estar faltando e que adicionamos manualmente.
             // É RECOMENDADO usar variáveis de ambiente (.env) para esses valores.
             instance: payload.instance || process.env.EVOLUTION_INSTANCE_NAME,

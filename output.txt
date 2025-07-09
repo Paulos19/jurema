@@ -2,82 +2,36 @@
   {
     "headers": {
       "host": "n8n-n8n.qqfurw.easypanel.host",
-      "user-agent": "axios/1.7.9",
-      "content-length": "797",
-      "accept-encoding": "gzip, compress, deflate, br",
-      "content-type": "application/json",
-      "x-forwarded-for": "172.18.0.1",
-      "x-forwarded-host": "n8n-n8n.qqfurw.easypanel.host",
-      "x-forwarded-port": "443",
-      "x-forwarded-proto": "https",
-      "x-forwarded-server": "dd296f3ae2ce",
-      "x-real-ip": "172.18.0.1"
-    },
-    "params": {},
-    "query": {},
-    "body": {
-      "event": "messages.upsert",
-      "instance": "Paulo Henrique",
-      "data": {
-        "key": {
-          "remoteJid": "556186446934@s.whatsapp.net",
-          "fromMe": true,
-          "id": "5252CFC1FDB6339420BA0A46A5773CAB"
-        },
-        "pushName": "Henrique",
-        "status": "SERVER_ACK",
-        "message": {
-          "conversation": "/criar_cliente"
-        },
-        "contextInfo": {
-          "entryPointConversionSource": "global_search_new_chat",
-          "entryPointConversionApp": "whatsapp",
-          "entryPointConversionDelaySeconds": 583477
-        },
-        "messageType": "conversation",
-        "messageTimestamp": 1752071196,
-        "instanceId": "6e45cbed-aca2-4e96-a5d7-0cad76e813d3",
-        "source": "android"
-      },
-      "destination": "https://n8n-n8n.qqfurw.easypanel.host/webhook/mensagens",
-      "date_time": "2025-07-09T11:26:37.007Z",
-      "sender": "556186446934@s.whatsapp.net",
-      "server_url": "https://evolution-evolution.qqfurw.easypanel.host",
-      "apikey": "75EEB594B867-40E1-959D-623FE25140BC"
-    },
-    "webhookUrl": "https://n8n-n8n.qqfurw.easypanel.host/webhook/mensagens",
-    "executionMode": "production"
-  }
-]
-
-
-Output Criar Cliente:
-
-[
-  {
-    "headers": {
-      "host": "n8n-n8n.qqfurw.easypanel.host",
       "user-agent": "node",
-      "content-length": "114",
+      "content-length": "223",
       "accept": "*/*",
       "accept-encoding": "br, gzip, deflate",
       "accept-language": "*",
       "content-type": "application/json",
       "sec-fetch-mode": "cors",
-      "x-forwarded-for": "13.222.178.4",
+      "x-forwarded-for": "44.213.81.167",
       "x-forwarded-host": "n8n-n8n.qqfurw.easypanel.host",
       "x-forwarded-port": "443",
       "x-forwarded-proto": "https",
       "x-forwarded-server": "dd296f3ae2ce",
-      "x-real-ip": "13.222.178.4",
-      "x-vercel-id": "gru1::59j27-1752073431910-86c462867a47"
+      "x-real-ip": "44.213.81.167",
+      "x-vercel-id": "gru1::c96jn-1752076809700-b0a96efb1770"
     },
     "params": {},
     "query": {},
     "body": {
-      "command": "/criar_cliente",
+      "event": "messages.upsert",
       "sender": "556186446934@s.whatsapp.net",
-      "messageId": "CD96847A0C60AE19301B5E1A60272065"
+      "data": {
+        "key": {
+          "remoteJid": "556186446934@s.whatsapp.net",
+          "fromMe": true,
+          "id": "CE93C90E38A8805791E8C56F7E52A4ED"
+        },
+        "message": {
+          "conversation": "/criar_cliente"
+        }
+      }
     },
     "webhookUrl": "https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem",
     "executionMode": "production"
