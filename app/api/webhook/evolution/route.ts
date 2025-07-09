@@ -17,11 +17,12 @@ export async function POST(req: Request) {
     const events = Array.isArray(requestBody) ? requestBody : [requestBody];
 
     // Itera sobre cada evento recebido.
-    // RENOMEADO: 'body' para 'event' para evitar confusão com a propriedade 'event.body'.
-    for (const event of events) {
+    for (const rawEvent of events) {
 
-      // O payload real da Evolution API está dentro da propriedade 'body' do evento.
-      const payload = event.body;
+      // O payload real pode estar diretamente no evento ou dentro de uma propriedade 'body'.
+      // Isso garante compatibilidade se o webhook receber dados da Evolution API diretamente
+      // ou se for encaminhado por outro webhook do n8n que encapsula a requisição.
+      const payload = rawEvent.body || rawEvent;
 
       // Verifica se é um evento de nova mensagem e se os dados necessários existem.
       if (payload && payload.event === 'messages.upsert' && payload.data?.key && payload.data?.message) {
@@ -30,8 +31,8 @@ export async function POST(req: Request) {
         const messageContent = message.conversation || message.extendedTextMessage?.text || '';
         const fromMe = key.fromMe; // true se a mensagem foi enviada pelo bot, false caso contrário
 
-        // Verifica se é o comando /criar_cliente
-        if (messageContent.startsWith('/criar_cliente')) {
+        // Verifica se é o comando /criar_cliente, removendo espaços em branco que possam existir.
+        if (messageContent.trim().startsWith('/criar_cliente')) {
           console.log(`Comando /criar_cliente detectado de ${sender}. Acionando webhook do n8n AI.`);
 
           // Aciona o webhook do n8n para o agente de IA
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
               headers: {
                 'Content-Type': 'application/json',
               },
-              // CORREÇÃO: Envie o 'payload' (que é event.body), que contém os dados reais da mensagem (instance, apikey, etc.).
+              // Envia o payload completo que contém os dados da mensagem (instance, apikey, etc.).
               body: JSON.stringify(payload),
             });
             console.log('Webhook do n8n AI acionado com sucesso com o payload completo.');
