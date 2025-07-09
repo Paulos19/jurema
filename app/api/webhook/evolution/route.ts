@@ -28,51 +28,50 @@ export async function POST(req: Request) {
         // Verifica se é o comando /criar_cliente
         if (messageContent.startsWith('/criar_cliente')) {
           console.log(`Comando /criar_cliente detectado de ${sender}. Acionando webhook do n8n AI.`);
-          
+
           // Aciona o webhook do n8n para o agente de IA
           try {
+            // Apenas envie o objeto 'body' original completo.
+            // O n8n receberá a estrutura aninhada que você espera.
             await fetch('https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({
-                command: '/criar_cliente',
-                serverUrl: body.server_url,
-                sender: sender,
-              }),
+              // Envie o objeto 'body' inteiro que você já tem.
+              body: JSON.stringify(body),
             });
-            console.log('Webhook do n8n AI acionado com sucesso.');
+            console.log('Webhook do n8n AI acionado com sucesso com o payload completo.');
           } catch (fetchError) {
             console.error('Erro ao acionar o webhook do n8n AI:', fetchError);
           }
           // Não salva o comando no banco de dados como uma mensagem normal
-          continue; 
+          continue;
         }
-
-        // Salva a mensagem no banco de dados se houver conteúdo.
-        if (sender && messageContent) {
-          await prisma.message.create({
-            data: {
-              sender: sender,
-              content: messageContent,
-              fromMe: fromMe,
-              rawPayload: body, // Salva o payload completo para referência
-            },
-          });
-          console.log(`Mensagem de ${sender} (fromMe: ${fromMe}) salva no banco de dados.`);
+        
+          // Salva a mensagem no banco de dados se houver conteúdo.
+          if (sender && messageContent) {
+            await prisma.message.create({
+              data: {
+                sender: sender,
+                content: messageContent,
+                fromMe: fromMe,
+                rawPayload: body, // Salva o payload completo para referência
+              },
+            });
+            console.log(`Mensagem de ${sender} (fromMe: ${fromMe}) salva no banco de dados.`);
+          }
         }
       }
+
+      // Responde à Evolution API que o webhook foi recebido com sucesso.
+      return NextResponse.json({ message: 'Webhook recebido com sucesso!' }, { status: 200 });
+
+    } catch (error) {
+      // Em caso de erro (ex: JSON inválido), loga o erro.
+      console.error('Erro ao processar o webhook da Evolution API:', error);
+
+      // Responde com um erro do servidor.
+      return NextResponse.json({ message: 'Erro interno ao processar o webhook.' }, { status: 500 });
     }
-
-    // Responde à Evolution API que o webhook foi recebido com sucesso.
-    return NextResponse.json({ message: 'Webhook recebido com sucesso!' }, { status: 200 });
-
-  } catch (error) {
-    // Em caso de erro (ex: JSON inválido), loga o erro.
-    console.error('Erro ao processar o webhook da Evolution API:', error);
-
-    // Responde com um erro do servidor.
-    return NextResponse.json({ message: 'Erro interno ao processar o webhook.' }, { status: 500 });
   }
-}
