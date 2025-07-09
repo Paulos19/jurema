@@ -20,8 +20,6 @@ export async function POST(req: Request) {
     for (const rawEvent of events) {
 
       // O payload real pode estar diretamente no evento ou dentro de uma propriedade 'body'.
-      // Isso garante compatibilidade se o webhook receber dados da Evolution API diretamente
-      // ou se for encaminhado por outro webhook do n8n que encapsula a requisição.
       const payload = rawEvent.body || rawEvent;
 
       // Verifica se é um evento de nova mensagem e se os dados necessários existem.
@@ -35,6 +33,23 @@ export async function POST(req: Request) {
         if (messageContent.trim().startsWith('/criar_cliente')) {
           console.log(`Comando /criar_cliente detectado de ${sender}. Acionando webhook do n8n AI.`);
 
+          // --- INÍCIO DA ALTERAÇÃO ---
+          // Manualmente construímos o payload para o n8n para garantir que todos os campos estejam presentes,
+          // mesmo que o webhook de origem os omita.
+          const payloadForN8n = {
+            // Dados que extraímos do payload recebido:
+            event: payload.event,
+            sender: sender,
+            data: payload.data,
+            
+            // Dados que podem estar faltando e que adicionamos manualmente.
+            // É RECOMENDADO usar variáveis de ambiente (.env) para esses valores.
+            instance: payload.instance || process.env.EVOLUTION_INSTANCE_NAME,
+            apikey: payload.apikey || process.env.EVOLUTION_API_KEY,
+            server_url: payload.server_url || process.env.EVOLUTION_SERVER_URL,
+          };
+          // --- FIM DA ALTERAÇÃO ---
+
           // Aciona o webhook do n8n para o agente de IA
           try {
             await fetch('https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem', {
@@ -42,10 +57,10 @@ export async function POST(req: Request) {
               headers: {
                 'Content-Type': 'application/json',
               },
-              // Envia o payload completo que contém os dados da mensagem (instance, apikey, etc.).
-              body: JSON.stringify(payload),
+              // Envia o payload que acabamos de construir, garantindo que ele está completo.
+              body: JSON.stringify(payloadForN8n),
             });
-            console.log('Webhook do n8n AI acionado com sucesso com o payload completo.');
+            console.log('Webhook do n8n AI acionado com sucesso com o payload completo e enriquecido.');
           } catch (fetchError) {
             console.error('Erro ao acionar o webhook do n8n AI:', fetchError);
           }
