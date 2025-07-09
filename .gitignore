@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/images_output
 /.pnp
 .pnp.*
 .yarn/*

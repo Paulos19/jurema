@@ -13,10 +13,12 @@ export async function POST(req: Request) {
     // Log para depuração: imprime o corpo inteiro do webhook no console do servidor.
     console.log('Webhook da Evolution API recebido:', JSON.stringify(body, null, 2));
 
-    // Verifica se é um evento de nova mensagem e se não foi enviada por nós.
-    if (body.event === 'messages.upsert' && body.data?.key?.fromMe === false) {
-      const sender = body.data.key.remoteJid;
-      const messageContent = body.data.message?.conversation || body.data.message?.extendedTextMessage?.text || '';
+    // Verifica se é um evento de nova mensagem e se os dados necessários existem.
+    if (body.event === 'messages.upsert' && body.data?.key && body.data?.message) {
+      const { key, message } = body.data;
+      const sender = key.remoteJid; // JID do chat (usuário ou grupo)
+      const messageContent = message.conversation || message.extendedTextMessage?.text || '';
+      const fromMe = key.fromMe; // true se a mensagem foi enviada pelo bot, false caso contrário
 
       // Salva a mensagem no banco de dados se houver conteúdo.
       if (sender && messageContent) {
@@ -24,10 +26,11 @@ export async function POST(req: Request) {
           data: {
             sender: sender,
             content: messageContent,
+            fromMe: fromMe,
             rawPayload: body, // Salva o payload completo para referência
           },
         });
-        console.log(`Mensagem de ${sender} salva no banco de dados.`);
+        console.log(`Mensagem de ${sender} (fromMe: ${fromMe}) salva no banco de dados.`);
       }
     }
 

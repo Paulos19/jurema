@@ -158,6 +158,7 @@ model Message {
   id          String   @id @default(cuid())
   sender      String
   content     String
+  fromMe      Boolean
   receivedAt  DateTime @default(now())
   rawPayload  Json
 }
