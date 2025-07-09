@@ -38,13 +38,7 @@ export async function POST(req: Request) {
               },
               body: JSON.stringify({
                 command: '/criar_cliente',
-                server_url: body.server_url,
                 sender: sender,
-                instance: body.instance, // Adiciona o nome da instância
-                apikey: body.apikey,     // Adiciona a chave da API
-                pushName: body.data.pushName, // Adiciona o nome de exibição do usuário
-                messageId: body.data.key.id, // Adiciona o ID da mensagem
-                messageTimestamp: body.data.messageTimestamp, // Adiciona o timestamp da mensagem
               }),
             });
             console.log('Webhook do n8n AI acionado com sucesso.');
