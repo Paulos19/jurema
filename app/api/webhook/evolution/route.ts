@@ -17,10 +17,15 @@ export async function POST(req: Request) {
     const events = Array.isArray(requestBody) ? requestBody : [requestBody];
 
     // Itera sobre cada evento recebido.
-    for (const body of events) {
+    // RENOMEADO: 'body' para 'event' para evitar confusão com a propriedade 'event.body'.
+    for (const event of events) {
+
+      // O payload real da Evolution API está dentro da propriedade 'body' do evento.
+      const payload = event.body;
+
       // Verifica se é um evento de nova mensagem e se os dados necessários existem.
-      if (body.event === 'messages.upsert' && body.data?.key && body.data?.message) {
-        const { key, message } = body.data;
+      if (payload && payload.event === 'messages.upsert' && payload.data?.key && payload.data?.message) {
+        const { key, message } = payload.data;
         const sender = key.remoteJid; // JID do chat (usuário ou grupo)
         const messageContent = message.conversation || message.extendedTextMessage?.text || '';
         const fromMe = key.fromMe; // true se a mensagem foi enviada pelo bot, false caso contrário
@@ -31,15 +36,13 @@ export async function POST(req: Request) {
 
           // Aciona o webhook do n8n para o agente de IA
           try {
-            // Apenas envie o objeto 'body' original completo.
-            // O n8n receberá a estrutura aninhada que você espera.
             await fetch('https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
-              // Envie o objeto 'body' inteiro que você já tem.
-              body: JSON.stringify(body),
+              // CORREÇÃO: Envie o 'payload' (que é event.body), que contém os dados reais da mensagem (instance, apikey, etc.).
+              body: JSON.stringify(payload),
             });
             console.log('Webhook do n8n AI acionado com sucesso com o payload completo.');
           } catch (fetchError) {
@@ -48,30 +51,31 @@ export async function POST(req: Request) {
           // Não salva o comando no banco de dados como uma mensagem normal
           continue;
         }
-        
-          // Salva a mensagem no banco de dados se houver conteúdo.
-          if (sender && messageContent) {
-            await prisma.message.create({
-              data: {
-                sender: sender,
-                content: messageContent,
-                fromMe: fromMe,
-                rawPayload: body, // Salva o payload completo para referência
-              },
-            });
-            console.log(`Mensagem de ${sender} (fromMe: ${fromMe}) salva no banco de dados.`);
-          }
+
+        // Salva a mensagem no banco de dados se houver conteúdo.
+        if (sender && messageContent) {
+          await prisma.message.create({
+            data: {
+              sender: sender,
+              content: messageContent,
+              fromMe: fromMe,
+              // Salva o payload completo da Evolution para referência
+              rawPayload: payload,
+            },
+          });
+          console.log(`Mensagem de ${sender} (fromMe: ${fromMe}) salva no banco de dados.`);
         }
       }
-
-      // Responde à Evolution API que o webhook foi recebido com sucesso.
-      return NextResponse.json({ message: 'Webhook recebido com sucesso!' }, { status: 200 });
-
-    } catch (error) {
-      // Em caso de erro (ex: JSON inválido), loga o erro.
-      console.error('Erro ao processar o webhook da Evolution API:', error);
-
-      // Responde com um erro do servidor.
-      return NextResponse.json({ message: 'Erro interno ao processar o webhook.' }, { status: 500 });
     }
+
+    // Responde à Evolution API que o webhook foi recebido com sucesso.
+    return NextResponse.json({ message: 'Webhook recebido com sucesso!' }, { status: 200 });
+
+  } catch (error) {
+    // Em caso de erro (ex: JSON inválido), loga o erro.
+    console.error('Erro ao processar o webhook da Evolution API:', error);
+
+    // Responde com um erro do servidor.
+    return NextResponse.json({ message: 'Erro interno ao processar o webhook.' }, { status: 500 });
   }
+}
