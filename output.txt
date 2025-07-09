@@ -49,3 +49,37 @@
     "executionMode": "production"
   }
 ]
+
+
+Output Criar Cliente:
+
+[
+  {
+    "headers": {
+      "host": "n8n-n8n.qqfurw.easypanel.host",
+      "user-agent": "node",
+      "content-length": "114",
+      "accept": "*/*",
+      "accept-encoding": "br, gzip, deflate",
+      "accept-language": "*",
+      "content-type": "application/json",
+      "sec-fetch-mode": "cors",
+      "x-forwarded-for": "13.222.178.4",
+      "x-forwarded-host": "n8n-n8n.qqfurw.easypanel.host",
+      "x-forwarded-port": "443",
+      "x-forwarded-proto": "https",
+      "x-forwarded-server": "dd296f3ae2ce",
+      "x-real-ip": "13.222.178.4",
+      "x-vercel-id": "gru1::59j27-1752073431910-86c462867a47"
+    },
+    "params": {},
+    "query": {},
+    "body": {
+      "command": "/criar_cliente",
+      "sender": "556186446934@s.whatsapp.net",
+      "messageId": "CD96847A0C60AE19301B5E1A60272065"
+    },
+    "webhookUrl": "https://n8n-n8n.qqfurw.easypanel.host/webhook/receber-mensagem",
+    "executionMode": "production"
+  }
+]
