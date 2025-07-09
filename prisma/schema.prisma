@@ -153,3 +153,11 @@ enum InstallmentStatus {
   Pago
   Atrasado
 }
+
+model Message {
+  id          String   @id @default(cuid())
+  sender      String
+  content     String
+  receivedAt  DateTime @default(now())
+  rawPayload  Json
+}
