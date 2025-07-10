@@ -93,6 +93,7 @@ model Loan {
   client               Client           @relation(fields: [clientId], references: [id])
   codeId               String           @unique @map("code_id")
   loanedValue          Decimal          @map("loaned_value") @db.Decimal(10, 2)
+  interestRate         Decimal?         @db.Decimal(10, 2)
   title                String
   type                 LoanType
   status               LoanStatus
