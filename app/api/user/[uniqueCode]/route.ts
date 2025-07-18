@@ -9,9 +9,11 @@ export async function GET(request: Request, { params }: { params: { uniqueCode: 
       return NextResponse.json({ message: 'Unique code is required' }, { status: 400 });
     }
 
+    // Busca o usuário no banco de dados
     const user = await prisma.user.findUnique({
       where: { uniqueCode },
-      select: { // Select specific fields to avoid exposing sensitive data like password
+      // Seleciona explicitamente os campos que podem ser retornados publicamente
+      select: {
         id: true,
         email: true,
         cpf: true,
@@ -22,6 +24,10 @@ export async function GET(request: Request, { params }: { params: { uniqueCode: 
         createdAt: true,
         updatedAt: true,
         uniqueCode: true,
+        // Inclui os campos da Evolution API na resposta
+        evoServerUrl: true,
+        evoInstance: true,
+        evoApiKey: true,
       },
     });
 
