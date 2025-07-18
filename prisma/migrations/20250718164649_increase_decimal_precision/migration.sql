@@ -1,0 +1,21 @@
+-- AlterTable
+ALTER TABLE "accounts" ALTER COLUMN "balance" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "profit" SET DATA TYPE DECIMAL(15,2);
+
+-- AlterTable
+ALTER TABLE "clients" ALTER COLUMN "total_loaned" SET DATA TYPE DECIMAL(15,2);
+
+-- AlterTable
+ALTER TABLE "installments" ALTER COLUMN "due_value" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "paid_value" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "total_fine" SET DATA TYPE DECIMAL(15,2);
+
+-- AlterTable
+ALTER TABLE "loans" ALTER COLUMN "loaned_value" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "loan_balance" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "original_due_value" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "daily_fine_value" SET DATA TYPE DECIMAL(15,2),
+ALTER COLUMN "interestRate" SET DATA TYPE DECIMAL(15,2);
+
+-- AlterTable
+ALTER TABLE "transactions" ALTER COLUMN "value" SET DATA TYPE DECIMAL(15,2);
