@@ -45,6 +45,9 @@ export async function GET(request: Request) {
             user: { // Inclui os dados do credor (para pegar a chave PIX)
               select: {
                 pixKey: true,
+                evoServerUrl: true,
+                evoInstance: true,
+                evoApiKey: true,
               },
             },
           },

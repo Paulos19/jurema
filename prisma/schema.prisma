@@ -18,6 +18,9 @@ model User {
   uniqueCode   String?        @unique @map("unique_code")
   city         String
   state        String
+  evoServerUrl String?        @map("evo_server_url")
+  evoInstance  String?        @map("evo_instance")
+  evoApiKey    String?        @map("evo_api_key")
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
   accounts     Account[]
