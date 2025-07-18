@@ -2,13 +2,42 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Allow access to login, user creation, and client creation routes without authentication
-  if (request.nextUrl.pathname === '/api/login' || request.nextUrl.pathname === '/api/criar_credor' || request.nextUrl.pathname === '/api/criar_cliente' || request.nextUrl.pathname === '/api/criar_conta' || request.nextUrl.pathname === '/api/criar_emprestimo' || request.nextUrl.pathname === '/api/criar_parcela' || request.nextUrl.pathname.startsWith('/api/user/') || request.nextUrl.pathname.startsWith('/api/client/') || request.nextUrl.pathname.startsWith('/api/loan/') || request.nextUrl.pathname.startsWith('/api/installment/') || request.nextUrl.pathname.startsWith('/api/transaction/') || request.nextUrl.pathname === '/api/criar_transacao' || request.nextUrl.pathname === '/api/registrar_pagamento' || request.nextUrl.pathname.startsWith('/api/webhook')) {
+  const { pathname } = request.nextUrl;
+
+  // Lista de rotas públicas que não exigem autenticação via middleware
+  const publicRoutes = [
+    '/api/login',
+    '/api/criar_credor',
+    '/api/criar_cliente',
+    '/api/criar_conta',
+    '/api/criar_emprestimo',
+    '/api/criar_parcela',
+    '/api/criar_transacao',
+    '/api/registrar_pagamento',
+    '/api/emprestimo-completo', // <-- ROTA ADICIONADA AQUI
+  ];
+
+  // Lista de rotas que começam com um prefixo e são públicas
+  const publicPrefixes = [
+    '/api/user/',
+    '/api/client/',
+    '/api/loan/',
+    '/api/installment/',
+    '/api/transaction/',
+    '/api/webhook/',
+  ];
+
+  // Verifica se a rota atual está na lista de rotas públicas exatas
+  if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // For any other API routes that require authentication, you would implement your logic here.
-  // For example, checking for an API key or a different token.
+  // Verifica se a rota atual começa com um dos prefixos públicos
+  if (publicPrefixes.some(prefix => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
+  // Se a rota não for pública, bloqueia o acesso
   return NextResponse.json({ message: 'Authentication required for this route' }, { status: 401 });
 }
 
