@@ -19,6 +19,7 @@ interface InstallmentInput {
   dueDate: string;
 }
 
+// Interface para os dados do empréstimo recebidos no JSON
 interface LoanDataInput {
   clientId: string;
   loanedValue: number;
@@ -28,7 +29,7 @@ interface LoanDataInput {
   recurrencePeriod: string; // Recebemos como string
   interestRate?: number;
   loanDate: string;
-  codeId: string;
+  codeId: string; // Garante que este campo está na interface
 }
 
 interface EmprestimoCompletoInput {
@@ -45,18 +46,17 @@ export async function POST(request: Request) {
       installments 
     }: EmprestimoCompletoInput = await request.json();
 
-    if (!uniqueCode || !loanData || !installments || installments.length === 0) {
-      return NextResponse.json({ message: 'Dados insuficientes para criar o empréstimo completo.' }, { status: 400 });
+    if (!uniqueCode || !loanData || !installments || !loanData.codeId || installments.length === 0) {
+      return NextResponse.json({ message: 'Dados insuficientes para criar o empréstimo completo, incluindo o codeId.' }, { status: 400 });
     }
 
-    // --- VALIDAÇÃO DOS ENUMS ---
+    // Validação dos Enums
     if (!isLoanType(loanData.type)) {
       return NextResponse.json({ message: `Tipo de empréstimo inválido: ${loanData.type}` }, { status: 400 });
     }
     if (!isRecurrencePeriod(loanData.recurrencePeriod)) {
       return NextResponse.json({ message: `Período de recorrência inválido: ${loanData.recurrencePeriod}` }, { status: 400 });
     }
-    // ----------------------------
 
     const user = await prisma.user.findUnique({ where: { uniqueCode: uniqueCode } });
     if (!user) {
@@ -68,7 +68,6 @@ export async function POST(request: Request) {
         data: {
           userId: user.id,
           clientId: loanData.clientId,
-          codeId: loanData.codeId,
           title: loanData.title,
           status: 'Aberto',
           installmentsQuantity: loanData.installmentsQuantity,
@@ -77,16 +76,17 @@ export async function POST(request: Request) {
           loanDate: new Date(loanData.loanDate),
           loanBalance: new Prisma.Decimal(loanData.loanedValue),
           originalDueValue: new Prisma.Decimal(0),
-          // --- CORREÇÃO APLICADA AQUI ---
-          // Agora fazemos o "cast" para o tipo correto após a validação
           type: loanData.type as LoanType,
           recurrencePeriod: loanData.recurrencePeriod as RecurrencePeriod,
+          // --- CORREÇÃO APLICADA AQUI ---
+          // Agora passamos o codeId que veio do n8n para o banco de dados
+          codeId: loanData.codeId,
         },
       });
 
       const installmentsData = installments.map((inst, index) => ({
         loanId: newLoan.id,
-        codeId: `P-${newLoan.codeId}-${index + 1}`.toUpperCase(),
+        codeId: `P-${newLoan.codeId}-${index + 1}`.toUpperCase(), // Usa o codeId do empréstimo como base
         dueValue: new Prisma.Decimal(inst.dueValue),
         dueDate: new Date(inst.dueDate),
         status: 'Pendente' as const,
