@@ -18,6 +18,7 @@ export async function middleware(request: NextRequest) {
     '/api/installments/due',
     '/api/setup-accounts',
     '/api/amortize-payment',
+    '/api/payment/register',
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas
