@@ -15,7 +15,8 @@ export async function middleware(request: NextRequest) {
     '/api/criar_transacao',
     '/api/registrar_pagamento',
     '/api/emprestimo-completo',
-    '/api/installments/due', // <-- ROTA ADICIONADA AQUI
+    '/api/installments/due',
+    '/api/setup-accounts',
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas
