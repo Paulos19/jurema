@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       }
       
       const dueValue = installment.dueValue;
-      let operationSummary: any = { type: 'full_payment', paidAmount: paymentValue, installmentCode: installment.codeId };
+      let operationSummary: any = { type: 'full_payment', paidAmount: paymentValue, installmentCode: installment.codeId, originalDueValue: dueValue };
 
       // --- LÓGICA PRINCIPAL: PAGAMENTO INTEGRAL VS. AMORTIZAÇÃO ---
       if (paymentValue.gte(dueValue)) {
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
         // 2. Encontra as outras parcelas pendentes para diluir o valor
         const otherPendingInstallments = await tx.installment.findMany({
           where: { loanId: installment.loanId, status: 'Pendente', NOT: { id: installmentId } },
+          orderBy: { dueDate: 'asc' }
         });
 
         if (otherPendingInstallments.length > 0) {
@@ -64,19 +65,22 @@ export async function POST(request: Request) {
           const newInstallmentValue = otherPendingInstallments[0].dueValue.plus(dilutionAmount);
           operationSummary = {
               ...operationSummary,
-              type: 'amortization',
+              type: 'amortization_dilution',
               remainingAmount: remainingDue,
               dilutedIn: otherPendingInstallments.length,
               newInstallmentValue: newInstallmentValue
           };
         } else {
             // Se não houver parcelas futuras, cria uma nova com o valor restante
+            const nextDueDate = new Date(installment.dueDate);
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1); // Exemplo: joga para o próximo mês
+            
             await tx.installment.create({
                 data: {
                     loanId: installment.loanId,
                     codeId: `${installment.codeId}-RESTANTE`,
                     dueValue: remainingDue,
-                    dueDate: installment.dueDate, // Pode ajustar a data se necessário
+                    dueDate: nextDueDate,
                     status: 'Pendente',
                 }
             });
@@ -85,19 +89,16 @@ export async function POST(request: Request) {
       }
 
       // --- OPERAÇÕES COMUNS ---
-      // Atualiza o saldo do empréstimo
       const updatedLoan = await tx.loan.update({
         where: { id: installment.loanId },
         data: { loanBalance: { decrement: paymentValue } },
       });
 
-      // Se o saldo zerar, quita o empréstimo
       if (updatedLoan.loanBalance.isZero() || updatedLoan.loanBalance.isNegative()) {
         await tx.loan.update({ where: { id: updatedLoan.id }, data: { status: 'Quitado' } });
         operationSummary.loanStatus = 'Quitado';
       }
 
-      // Cria a transação e atualiza o saldo da conta
       await tx.transaction.create({ data: { accountId, title: `Pag. Parcela ${installment.codeId}`, value: paymentValue, type: 'Entrada', category: 'Pagamento', date: new Date(paymentDate) } });
       await tx.account.update({ where: { id: accountId }, data: { balance: { increment: paymentValue } } });
 
