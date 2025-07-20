@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
@@ -9,73 +10,100 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Missing required fields for payment registration' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { uniqueCode } });
+    // Converta o valor pago para um Prisma.Decimal logo no início
+    const paymentValue = new Prisma.Decimal(amountPaid);
 
+    const user = await prisma.user.findUnique({ where: { uniqueCode } });
     if (!user) {
       return NextResponse.json({ message: 'Invalid unique code' }, { status: 401 });
     }
 
-    const installment = await prisma.installment.findUnique({
-      where: { id: installmentId },
-      include: { loan: { include: { client: true } } },
+    // Utilize uma transação para garantir que todas as operações funcionem ou nenhuma delas
+    const result = await prisma.$transaction(async (tx) => {
+      const installment = await tx.installment.findUnique({
+        where: { id: installmentId },
+        include: { loan: { include: { client: true } } },
+      });
+
+      if (!installment || installment.loan.userId !== user.id) {
+        throw new Error('Installment not found or does not belong to this user');
+      }
+
+      const account = await tx.account.findUnique({ where: { id: accountId, userId: user.id } });
+      if (!account) {
+        throw new Error('Account not found or does not belong to this user');
+      }
+
+      // Calcula o novo valor pago e o status
+      const newPaidValue = installment.paidValue.plus(paymentValue);
+      let newInstallmentStatus = installment.status;
+
+      // Use .gte() para comparar Decimals
+      if (newPaidValue.gte(installment.dueValue)) {
+        newInstallmentStatus = 'Pago';
+      }
+
+      // 1. Atualiza a parcela
+      const updatedInstallment = await tx.installment.update({
+        where: { id: installmentId },
+        data: {
+          paidValue: {
+            increment: paymentValue, // Forma correta de adicionar valor
+          },
+          status: newInstallmentStatus,
+        },
+      });
+
+      // 2. Atualiza o saldo do empréstimo usando 'decrement'
+      const updatedLoan = await tx.loan.update({
+        where: { id: installment.loanId },
+        data: {
+          loanBalance: {
+            decrement: paymentValue,
+          },
+          status: quitLoan ? 'Quitado' : installment.loan.status,
+        },
+      });
+      
+      // Se o saldo do empréstimo zerar ou ficar negativo após o pagamento, quita o empréstimo
+      if (updatedLoan.loanBalance.isZero() || updatedLoan.loanBalance.isNegative()) {
+          await tx.loan.update({
+              where: {id: updatedLoan.id},
+              data: {status: 'Quitado'}
+          })
+      }
+
+      // 3. Cria o registo da transação
+      await tx.transaction.create({
+        data: {
+          accountId,
+          title: `Pagamento Parcela ${installment.codeId} - ${installment.loan.title}`,
+          value: paymentValue,
+          type: 'Entrada',
+          description: description || `Pagamento recebido para parcela ${installment.codeId}`,
+          category: 'Pagamento',
+          date: new Date(paymentDate),
+        },
+      });
+
+      // 4. Atualiza o saldo da conta usando 'increment'
+      await tx.account.update({
+        where: { id: accountId },
+        data: {
+          balance: {
+            increment: paymentValue,
+          },
+        },
+      });
+
+      return { updatedInstallment, updatedLoan };
     });
 
-    if (!installment || installment.loan.userId !== user.id) {
-      return NextResponse.json({ message: 'Installment not found or does not belong to this user' }, { status: 404 });
-    }
+    return NextResponse.json(result, { status: 200 });
 
-    const account = await prisma.account.findUnique({ where: { id: accountId, userId: user.id } });
-
-    if (!account) {
-      return NextResponse.json({ message: 'Account not found or does not belong to this user' }, { status: 404 });
-    }
-
-    const newPaidValue = installment.paidValue.toNumber() + parseFloat(amountPaid);
-    let newInstallmentStatus = installment.status;
-
-    if (newPaidValue >= installment.dueValue.toNumber()) {
-      newInstallmentStatus = 'Pago';
-    }
-
-    const updatedInstallment = await prisma.installment.update({
-      where: { id: installmentId },
-      data: {
-        paidValue: newPaidValue,
-        status: newInstallmentStatus,
-      },
-    });
-
-    // Update loan balance
-    const updatedLoan = await prisma.loan.update({
-      where: { id: installment.loanId },
-      data: {
-        loanBalance: installment.loan.loanBalance.toNumber() - parseFloat(amountPaid),
-        status: quitLoan ? 'Quitado' : installment.loan.status, // Set loan to 'Quitado' if quitLoan is true
-      },
-    });
-
-    // Create a transaction record
-    await prisma.transaction.create({
-      data: {
-        accountId,
-        title: `Pagamento Parcela ${installment.codeId} - ${installment.loan.title}`,
-        value: parseFloat(amountPaid),
-        type: 'Entrada',
-        description: description || `Pagamento recebido para parcela ${installment.codeId}`,
-        category: 'Pagamento',
-        date: new Date(paymentDate),
-      },
-    });
-
-    // Update account balance
-    await prisma.account.update({
-      where: { id: accountId },
-      data: { balance: account.balance.toNumber() + parseFloat(amountPaid) },
-    });
-
-    return NextResponse.json({ updatedInstallment, updatedLoan }, { status: 200 });
   } catch (error) {
     console.error('Error registering payment:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
