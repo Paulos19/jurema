@@ -137,18 +137,19 @@ enum RecurrencePeriod {
 }
 
 model Installment {
-  id        String            @id @default(uuid())
-  loanId    String            @map("loan_id")
-  loan      Loan              @relation(fields: [loanId], references: [id])
-  codeId    String            @unique @map("code_id")
-  dueValue  Decimal           @map("due_value") @db.Decimal(15, 2)
-  paidValue Decimal           @default(0) @map("paid_value") @db.Decimal(15, 2)
-  status    InstallmentStatus
-  dueDate   DateTime          @map("due_date")
-  daysLate  Int?              @map("days_late")
-  totalFine Decimal?          @map("total_fine") @db.Decimal(15, 2)
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  id               String            @id @default(uuid())
+  loanId           String            @map("loan_id")
+  loan             Loan              @relation(fields: [loanId], references: [id])
+  codeId           String            @unique @map("code_id")
+  dueValue         Decimal           @map("due_value") @db.Decimal(15, 2)
+  originalDueValue Decimal?          @map("original_due_value") @db.Decimal(15, 2)
+  paidValue        Decimal           @default(0) @map("paid_value") @db.Decimal(15, 2)
+  status           InstallmentStatus
+  dueDate          DateTime          @map("due_date")
+  daysLate         Int?              @map("days_late")
+  totalFine        Decimal?          @map("total_fine") @db.Decimal(15, 2)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
 
   @@map("installments")
 }
@@ -178,12 +179,12 @@ enum ConversationStatus {
 
 model Conversation {
   id             String             @id @default(uuid())
-  userId         String             @map("user_id") // The user (credor) who initiated the conversation
+  userId         String             @map("user_id")
   user           User               @relation(fields: [userId], references: [id])
-  clientWhatsapp String             @map("client_whatsapp") // The WhatsApp JID of the client being created
+  clientWhatsapp String             @map("client_whatsapp")
   status         ConversationStatus @default(IDLE)
-  currentStep    String?            @map("current_step") // e.g., "ask_name", "ask_cpf"
-  dataCollected  Json?              @map("data_collected") // JSON to store collected data
+  currentStep    String?            @map("current_step")
+  dataCollected  Json?              @map("data_collected")
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
 

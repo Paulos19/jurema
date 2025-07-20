@@ -6,7 +6,6 @@ import { Prisma } from '@prisma/client';
 import { differenceInDays, startOfDay } from 'date-fns';
 
 export async function POST(request: Request) {
-  // 1. Segurança: Protege o endpoint com uma chave secreta
   const apiKey = request.headers.get('X-API-KEY');
   if (apiKey !== process.env.INTERNAL_API_KEY) {
     return NextResponse.json({ message: 'Acesso não autorizado' }, { status: 401 });
@@ -15,16 +14,15 @@ export async function POST(request: Request) {
   try {
     const today = startOfDay(new Date());
 
-    // 2. Encontra todas as parcelas que estão pendentes e já venceram
     const installmentsToUpdate = await prisma.installment.findMany({
       where: {
         status: 'Pendente',
         dueDate: {
-          lt: today, // lt = less than (menor que hoje)
+          lt: today,
         },
       },
       include: {
-        loan: true, // Inclui o empréstimo para obter o valor da multa diária
+        loan: true,
       },
     });
 
@@ -33,31 +31,47 @@ export async function POST(request: Request) {
     }
 
     let updatedCount = 0;
+    const updates = [];
 
-    // 3. Itera sobre cada parcela atrasada para calcular e aplicar a multa
     for (const installment of installmentsToUpdate) {
-      // Verifica se o empréstimo tem um valor de multa diária configurado
       if (installment.loan.dailyFineValue && installment.loan.dailyFineValue.gt(0)) {
         
-        // Calcula o número de dias em atraso
-        const daysLate = differenceInDays(today, installment.dueDate);
+        // --- INÍCIO DA LÓGICA ATUALIZADA ---
 
-        // Calcula o valor total da multa
+        // 1. Determina o valor base para o cálculo da multa.
+        //    Usa o 'original_due_value' se já existir, senão usa o 'dueValue' atual.
+        const originalValue = installment.originalDueValue ?? installment.dueValue;
+        
+        // 2. Calcula os dias em atraso e o valor total da multa.
+        const daysLate = differenceInDays(today, installment.dueDate);
         const totalFine = installment.loan.dailyFineValue.times(daysLate);
 
-        // Atualiza a parcela no banco de dados
-        await prisma.installment.update({
+        // 3. Calcula o novo valor devido (Valor Original + Multa Total).
+        const newDueValue = originalValue.plus(totalFine);
+
+        // 4. Prepara a operação de atualização para a transação.
+        const updatePromise = prisma.installment.update({
           where: { id: installment.id },
           data: {
+            // Guarda o valor original apenas na primeira vez que a multa é aplicada.
+            originalDueValue: originalValue,
             status: 'Atrasado',
             daysLate: daysLate,
             totalFine: totalFine,
-            // Opcional: Adiciona a multa ao valor devido da parcela
-            // dueValue: installment.dueValue.plus(totalFine) 
+            dueValue: newDueValue, // O valor devido agora inclui a multa.
           },
         });
+        updates.push(updatePromise);
+        
+        // --- FIM DA LÓGICA ATUALIZADA ---
+        
         updatedCount++;
       }
+    }
+
+    // Executa todas as atualizações de uma só vez numa transação
+    if (updates.length > 0) {
+      await prisma.$transaction(updates);
     }
 
     return NextResponse.json({
