@@ -3,12 +3,10 @@ import prisma from '@/lib/prisma';
 import { Prisma, LoanType, RecurrencePeriod } from '@prisma/client'; // Importe os Enums
 
 // --- FUNÇÕES DE VALIDAÇÃO ---
-// Esta função verifica se a string recebida é um valor válido do enum LoanType
 function isLoanType(value: string): value is LoanType {
   return Object.values(LoanType).includes(value as LoanType);
 }
 
-// Esta função verifica se a string recebida é um valor válido do enum RecurrencePeriod
 function isRecurrencePeriod(value: string): value is RecurrencePeriod {
   return Object.values(RecurrencePeriod).includes(value as RecurrencePeriod);
 }
@@ -24,12 +22,13 @@ interface LoanDataInput {
   clientId: string;
   loanedValue: number;
   title: string;
-  type: string; // Recebemos como string
+  type: string;
   installmentsQuantity: number;
-  recurrencePeriod: string; // Recebemos como string
+  recurrencePeriod: string;
   interestRate?: number;
+  dailyFineValue?: number; // <-- NOVO CAMPO ADICIONADO
   loanDate: string;
-  codeId: string; // Garante que este campo está na interface
+  codeId: string;
 }
 
 interface EmprestimoCompletoInput {
@@ -50,7 +49,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Dados insuficientes para criar o empréstimo completo, incluindo o codeId.' }, { status: 400 });
     }
 
-    // Validação dos Enums
     if (!isLoanType(loanData.type)) {
       return NextResponse.json({ message: `Tipo de empréstimo inválido: ${loanData.type}` }, { status: 400 });
     }
@@ -78,15 +76,15 @@ export async function POST(request: Request) {
           originalDueValue: new Prisma.Decimal(0),
           type: loanData.type as LoanType,
           recurrencePeriod: loanData.recurrencePeriod as RecurrencePeriod,
-          // --- CORREÇÃO APLICADA AQUI ---
-          // Agora passamos o codeId que veio do n8n para o banco de dados
           codeId: loanData.codeId,
+          // --- LÓGICA ATUALIZADA AQUI ---
+          dailyFineValue: loanData.dailyFineValue ? new Prisma.Decimal(loanData.dailyFineValue) : null,
         },
       });
 
       const installmentsData = installments.map((inst, index) => ({
         loanId: newLoan.id,
-        codeId: `P-${newLoan.codeId}-${index + 1}`.toUpperCase(), // Usa o codeId do empréstimo como base
+        codeId: `P-${newLoan.codeId}-${index + 1}`.toUpperCase(),
         dueValue: new Prisma.Decimal(inst.dueValue),
         dueDate: new Date(inst.dueDate),
         status: 'Pendente' as const,
