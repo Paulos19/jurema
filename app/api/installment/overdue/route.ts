@@ -2,6 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { startOfDay } from 'date-fns';
 
 export async function GET(request: Request) {
   try {
@@ -17,9 +18,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Código único inválido' }, { status: 401 });
     }
 
+    // Pega a data de hoje, no início do dia, para a comparação.
+    const today = startOfDay(new Date());
+
     const overdueInstallments = await prisma.installment.findMany({
       where: {
-        status: 'Atrasado',
+        // A CONDIÇÃO CORRIGIDA ESTÁ AQUI:
+        // A parcela deve estar 'Pendente' E a data de vencimento deve ser anterior a hoje.
+        status: 'Pendente',
+        dueDate: {
+          lt: today, // 'lt' significa "less than" (menor que)
+        },
+        // Garante que estamos a buscar apenas as parcelas deste credor.
         loan: {
           userId: user.id,
         },
@@ -42,6 +52,7 @@ export async function GET(request: Request) {
     });
 
     if (overdueInstallments.length === 0) {
+      // Retorna 404 para o n8n saber que a busca foi bem-sucedida, mas não encontrou resultados.
       return NextResponse.json({ message: 'Nenhuma parcela em atraso encontrada.' }, { status: 404 });
     }
 
