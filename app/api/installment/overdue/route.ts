@@ -2,7 +2,6 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { startOfDay } from 'date-fns';
 
 export async function GET(request: Request) {
   try {
@@ -18,17 +17,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Código único inválido' }, { status: 401 });
     }
 
-    const today = startOfDay(new Date());
-
-    // CORREÇÃO: Utilizando findMany para retornar todas as parcelas
+    // --- LÓGICA ATUALIZADA AQUI ---
+    // A busca agora é mais simples e direta: procura por todas as parcelas
+    // que já foram marcadas com o status 'Atrasado'.
     const overdueInstallments = await prisma.installment.findMany({
       where: {
-        status: 'Pendente',
-        dueDate: {
-          lt: today, // lt = less than (menor que hoje)
-        },
+        status: 'Atrasado', // Procura diretamente pelo status 'Atrasado'
         loan: {
-          userId: user.id,
+          userId: user.id, // Garante que as parcelas pertencem ao credor
         },
       },
       include: {
@@ -44,7 +40,7 @@ export async function GET(request: Request) {
         },
       },
       orderBy: {
-        dueDate: 'asc',
+        dueDate: 'asc', // Ordena pela data de vencimento mais antiga
       },
     });
 
@@ -52,7 +48,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Nenhuma parcela em atraso encontrada.' }, { status: 404 });
     }
 
-    // A resposta agora será um array com todas as parcelas encontradas
     return NextResponse.json(overdueInstallments, { status: 200 });
 
   } catch (error) {
