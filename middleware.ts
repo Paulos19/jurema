@@ -22,7 +22,8 @@ export async function middleware(request: NextRequest) {
     '/api/loan/amortize-and-prepare',
     '/api/payment/prepare-recalculation',
     '/api/loan/update-plan',
-    '/api/client/active'
+    '/api/client/active',
+    '/api/summary'
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas
