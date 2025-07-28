@@ -9,26 +9,40 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(uuid())
-  email        String         @unique
-  cpf          String         @unique
+  id           String    @id @default(uuid())
+  email        String    @unique
+  cpf          String    @unique
   password     String
   whatsapp     String
-  pixKey       String         @map("pix_key")
-  uniqueCode   String?        @unique @map("unique_code")
+  pixKey       String    @map("pix_key")
+  uniqueCode   String?   @unique @map("unique_code")
   city         String
   state        String
-  evoServerUrl String?        @map("evo_server_url")
-  evoInstance  String?        @map("evo_instance")
-  evoApiKey    String?        @map("evo_api_key")
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
+  evoServerUrl String?   @map("evo_server_url")
+  evoInstance  String?   @map("evo_instance")
+  evoApiKey    String?   @map("evo_api_key")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  subscriptionStatus    SubscriptionStatus @default(FREE_TRIAL) @map("subscription_status")
+  subscriptionDueDate   DateTime?          @map("subscription_due_date")
+  trialEndsAt           DateTime?          @map("trial_ends_at")
+  abacatepayCustomerId  String?            @unique @map("abacatepay_customer_id")
+  abacatepayBillingId   String?            @unique @map("abacatepay_billing_id")
+
   accounts     Account[]
   clients      Client[]
   loans        Loan[]
   Conversation Conversation[]
 
   @@map("users")
+}
+
+enum SubscriptionStatus {
+  FREE_TRIAL
+  ACTIVE
+  OVERDUE
+  INACTIVE
 }
 
 model Account {
