@@ -26,7 +26,6 @@ export async function middleware(request: NextRequest) {
     '/api/summary',
     '/api/subscription/create-charge',
     '/api/receitas',
-    '/api/receitas/[id]'
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas
@@ -37,6 +36,7 @@ export async function middleware(request: NextRequest) {
     '/api/installment/',
     '/api/transaction/',
     '/api/webhook/',
+    '/api/receitas/'
   ];
 
   // Verifica se a rota atual está na lista de rotas públicas exatas
