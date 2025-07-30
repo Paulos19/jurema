@@ -217,9 +217,11 @@ model RecipeRequest {
   solicitadoPor String   @map("solicitado_por")
   solicitadoEm  DateTime @default(now()) @map("solicitado_em")
 
-  // Relacionamento com o Credor (User)
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id])
+  // A relação com o usuário foi removida
+  // userId String @map("user_id")
+  // user   User   @relation(fields: [userId], references: [id])
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
 
   @@map("recipe_requests")
 }

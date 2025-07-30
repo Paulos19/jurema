@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
     '/api/client/active',
     '/api/summary',
     '/api/subscription/create-charge',
-    '/api/abacate'
+    '/api/receitas'
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas

@@ -2,35 +2,18 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Rota GET: Para o administrador listar todos os pedidos de receita
+// Rota GET: Lista todos os pedidos de receita pendentes.
+// A segurança é garantida pelo N8N, que só chama esta rota se o remetente for o admin.
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const uniqueCode = searchParams.get('uniqueCode');
-
-    if (!uniqueCode) {
-      return NextResponse.json({ message: 'Código único do credor é obrigatório' }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { uniqueCode } });
-    if (!user) {
-      return NextResponse.json({ message: 'Código único inválido' }, { status: 401 });
-    }
-
     const recipeRequests = await prisma.recipeRequest.findMany({
       where: {
-        userId: user.id,
-        status: 'PENDENTE', // Lista apenas os pedidos pendentes
+        status: 'PENDENTE',
       },
       orderBy: {
-        solicitadoEm: 'asc', // Mostra os mais antigos primeiro
+        solicitadoEm: 'asc',
       },
     });
-
-    if (recipeRequests.length === 0) {
-      // Retorna um array vazio com status 200, que é mais comum para listas vazias
-      return NextResponse.json([], { status: 200 });
-    }
 
     return NextResponse.json(recipeRequests, { status: 200 });
 
@@ -40,25 +23,20 @@ export async function GET(request: Request) {
   }
 }
 
-// Rota POST: Para o N8N cadastrar um novo pedido de receita
+// Rota POST: Cadastra um novo pedido de receita.
+// Não precisa de uniqueCode.
 export async function POST(request: Request) {
   try {
-    const { uniqueCode, rawData, jsonData, solicitadoPor } = await request.json();
+    const { rawData, jsonData, solicitadoPor } = await request.json();
 
-    if (!uniqueCode || !rawData || !solicitadoPor) {
-      return NextResponse.json({ message: 'Campos obrigatórios ausentes: uniqueCode, rawData, solicitadoPor' }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({ where: { uniqueCode } });
-    if (!user) {
-      return NextResponse.json({ message: 'Código único inválido' }, { status: 401 });
+    if (!rawData || !solicitadoPor) {
+      return NextResponse.json({ message: 'Campos obrigatórios ausentes: rawData, solicitadoPor' }, { status: 400 });
     }
 
     const newRequest = await prisma.recipeRequest.create({
       data: {
-        userId: user.id,
         rawData: rawData,
-        jsonData: jsonData || {}, // Garante que o campo json não seja nulo
+        jsonData: jsonData || {},
         solicitadoPor: solicitadoPor,
         status: 'PENDENTE',
       },
