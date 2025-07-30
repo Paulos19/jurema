@@ -9,31 +9,32 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  cpf          String    @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
+  cpf          String   @unique
   password     String
   whatsapp     String
-  pixKey       String    @map("pix_key")
-  uniqueCode   String?   @unique @map("unique_code")
+  pixKey       String   @map("pix_key")
+  uniqueCode   String?  @unique @map("unique_code")
   city         String
   state        String
-  evoServerUrl String?   @map("evo_server_url")
-  evoInstance  String?   @map("evo_instance")
-  evoApiKey    String?   @map("evo_api_key")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  evoServerUrl String?  @map("evo_server_url")
+  evoInstance  String?  @map("evo_instance")
+  evoApiKey    String?  @map("evo_api_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  subscriptionStatus    SubscriptionStatus @default(FREE_TRIAL) @map("subscription_status")
-  subscriptionDueDate   DateTime?          @map("subscription_due_date")
-  trialEndsAt           DateTime?          @map("trial_ends_at")
-  abacatepayCustomerId  String?            @unique @map("abacatepay_customer_id")
-  abacatepayBillingId   String?            @unique @map("abacatepay_billing_id")
+  subscriptionStatus   SubscriptionStatus @default(FREE_TRIAL) @map("subscription_status")
+  subscriptionDueDate  DateTime?          @map("subscription_due_date")
+  trialEndsAt          DateTime?          @map("trial_ends_at")
+  abacatepayCustomerId String?            @unique @map("abacatepay_customer_id")
+  abacatepayBillingId  String?            @unique @map("abacatepay_billing_id")
 
-  accounts     Account[]
-  clients      Client[]
-  loans        Loan[]
-  Conversation Conversation[]
+  accounts      Account[]
+  clients       Client[]
+  loans         Loan[]
+  Conversation  Conversation[]
+  RecipeRequest RecipeRequest[]
 
   @@map("users")
 }
@@ -203,4 +204,22 @@ model Conversation {
   updatedAt      DateTime           @updatedAt @map("updated_at")
 
   @@map("conversations")
+}
+
+//Será removido futuramente
+
+model RecipeRequest {
+  id       String @id @default(uuid())
+  status   String @default("PENDENTE") // PENDENTE, CONCLUIDO
+  rawData  String // O texto completo que o paciente enviou
+  jsonData Json? // O JSON estruturado extraído pela IA
+
+  solicitadoPor String   @map("solicitado_por")
+  solicitadoEm  DateTime @default(now()) @map("solicitado_em")
+
+  // Relacionamento com o Credor (User)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("recipe_requests")
 }
