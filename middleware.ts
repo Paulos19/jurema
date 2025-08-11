@@ -26,6 +26,7 @@ export async function middleware(request: NextRequest) {
     '/api/summary',
     '/api/subscription/create-charge',
     '/api/receitas',
+    'api/webhook/abacatepay'
   ];
 
   // Lista de rotas que começam com um prefixo e são públicas
