@@ -10,7 +10,7 @@ export default function Home() {
         name: 'Teste',
         description: 'Produto teste',
         quantity: 1,
-        price: 24999
+        price: 10
       }
 
       const paymentDetails = await createPixPayment(product)

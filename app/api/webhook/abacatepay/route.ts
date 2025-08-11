@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
-const webhookSecret = process.env.ABACATE_PAY_WEBHOOK_SECRET
+const webhookSecret = process.env.NEXT_PUBLIC_ABACATE_PAY_WEBHOOK_SECRET
 
 export async function POST(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('webhookSecret')
