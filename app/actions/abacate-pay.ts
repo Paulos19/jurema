@@ -45,7 +45,7 @@ interface BillingResponse {
 
 export async function createPixPayment(product: Product) {
     try {
-        if (product.price < 10) {
+        if (product.price < 100) {
             throw new Error("Produto deve custar mais de 1 real")
         }
 
