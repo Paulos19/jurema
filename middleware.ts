@@ -1,59 +1,57 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Lista de rotas públicas que não exigem autenticação via middleware
-  const publicRoutes = [
-    '/api/login',
-    '/api/criar_credor',
-    '/api/criar_cliente',
-    '/api/criar_conta',
-    '/api/criar_emprestimo',
-    '/api/criar_parcela',
-    '/api/criar_transacao',
-    '/api/registrar_pagamento',
-    '/api/emprestimo-completo',
-    '/api/installments/due',
-    '/api/setup-accounts',
-    '/api/amortize-payment',
-    '/api/payment/register',
-    '/api/loan/amortize-and-prepare',
-    '/api/payment/prepare-recalculation',
-    '/api/loan/update-plan',
-    '/api/client/active',
-    '/api/summary',
-    '/api/subscription/create-charge',
-    '/api/receitas',
-    'api/webhook/abacatepay'
-  ];
-
-  // Lista de rotas que começam com um prefixo e são públicas
-  const publicPrefixes = [
-    '/api/user/',
-    '/api/client/',
-    '/api/loan/',
-    '/api/installment/',
-    '/api/transaction/',
-    '/api/webhook/',
-    '/api/receitas/'
-  ];
-
-  // Verifica se a rota atual está na lista de rotas públicas exatas
-  if (publicRoutes.includes(pathname)) {
+  // Allow requests for the login page, API routes, and static files
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.svg')
+  ) {
     return NextResponse.next();
   }
 
-  // Verifica se a rota atual começa com um dos prefixos públicos
-  if (publicPrefixes.some(prefix => pathname.startsWith(prefix))) {
-    return NextResponse.next();
+  const token = request.cookies.get('authToken')?.value;
+
+  if (!token) {
+    const loginUrl = new URL('/login', request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Se a rota não for pública, bloqueia o acesso
-  return NextResponse.json({ message: 'Authentication required for this route' }, { status: 401 });
+  try {
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    await jwtVerify(token, secret);
+    // Token is valid, allow the request to proceed
+    return NextResponse.next();
+  } catch (error) {
+    console.error('JWT Verification Error:', error);
+    // Token is invalid, redirect to login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', pathname); // Optional: redirect back after login
+    // Clear the invalid cookie
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete('authToken');
+    return response;
+  }
 }
 
+// See "Matching Paths" below to learn more
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
+  ],
 };

@@ -10,6 +10,7 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
+  name         String
   email        String   @unique
   cpf          String   @unique
   password     String
@@ -42,6 +43,8 @@ model User {
 enum SubscriptionStatus {
   FREE_TRIAL
   ACTIVE
+  ACTIVE_MONTHLY
+  ACTIVE_ANNUAL
   OVERDUE
   INACTIVE
 }

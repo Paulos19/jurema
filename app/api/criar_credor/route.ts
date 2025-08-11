@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     // Extrai todos os campos do corpo da requisição, incluindo os novos da Evolution API
     const { 
       masterKey, 
+      name, // Novo campo
       email, 
       cpf, 
       password, 
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     // Cria o novo usuário no banco de dados com todos os campos
     const user = await prisma.user.create({
       data: {
+        name,
         email,
         cpf,
         password: hashedPassword,
