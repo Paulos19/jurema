@@ -225,3 +225,10 @@ model RecipeRequest {
 
   @@map("recipe_requests")
 }
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  eventType   String
+  payload     Json
+  createdAt   DateTime  @default(now())
+}
