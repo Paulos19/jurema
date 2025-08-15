@@ -1,19 +1,46 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { cookies } from 'next/headers'; // Note: cookies() only works in Server Components
-import { jwtVerify } from 'jose';
-import { generatePixQRCode } from './actions/abacate-pay'; // Import the updated action
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { generatePixQRCode } from './actions/abacate-pay'; // Importa a action atualizada
 
-// Componente para o Modal do PIX
+// Componente para o Modal do PIX com lógica de Polling
 const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string; brCode: string; onClose: () => void; planName: string }) => {
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Função que verifica o status do pagamento
+    const checkPaymentStatus = async () => {
+      console.log('Verificando status do pagamento...');
+      try {
+        const response = await fetch('/api/user/subscription-status');
+        
+        if (response.ok) {
+          const { subscriptionStatus } = await response.json();
+          // Se a assinatura estiver ativa, o pagamento foi confirmado
+          if (subscriptionStatus === 'ACTIVE_MONTHLY' || subscriptionStatus === 'ACTIVE_ANNUAL') {
+            console.log('Pagamento confirmado! Redirecionando...');
+            clearInterval(intervalId); // Para o polling
+            router.push('/confirmacao'); // Redireciona para a página de confirmação
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status:', error);
+      }
+    };
+
+    // Inicia o polling, verificando a cada 5 segundos
+    const intervalId = setInterval(checkPaymentStatus, 5000);
+
+    // Limpa o intervalo quando o modal for fechado (componente desmontado)
+    return () => clearInterval(intervalId);
+  }, [router]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(brCode);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -25,7 +52,6 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Pague com PIX</h2>
         <p className="text-gray-600 mb-4">Para ativar sua assinatura {planName}</p>
         <img src={qrCodeUrl} alt="PIX QR Code" className="mx-auto w-64 h-64 rounded-lg border" />
-        <p className="mt-4 text-sm text-gray-500">Abra o app do seu banco e escaneie o código</p>
         <div className="mt-6">
           <input
             type="text"
@@ -40,6 +66,13 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
             {copied ? 'Copiado!' : 'Copiar Código (Copia e Cola)'}
           </button>
         </div>
+         <div className="mt-8 flex items-center justify-center space-x-2 text-gray-500">
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Aguardando confirmação do pagamento...</span>
+        </div>
       </div>
     </div>
   );
@@ -49,23 +82,22 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
   const [modalData, setModalData] = useState<{ qrCodeUrl: string; brCode: string; planName: string } | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // This effect runs on the client to get the userId from the token
   useEffect(() => {
     const getUserIdFromCookie = async () => {
       const token = document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
       if (token) {
         try {
-          // This is a simplified way to decode, for real apps, verification should be server-side
           const payload = JSON.parse(atob(token.split('.')[1]));
           setUserId(payload.userId as string);
         } catch (e) {
           console.error('Failed to decode token:', e);
         }
       }
-      setIsLoading(false);
+      setIsPageLoading(false);
     };
     getUserIdFromCookie();
   }, []);
@@ -94,7 +126,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 text-gray-900 font-sans">
-       {/* Modal Display Logic */}
        {modalData && (
         <PixModal
           qrCodeUrl={modalData.qrCodeUrl}
@@ -170,7 +201,7 @@ export default function Home() {
                 R$ 97<span className="text-xl font-medium">/mês</span>
               </p>
               <ul className="text-gray-700 space-y-3 mb-8">
-                 <li className="flex items-center">
+                <li className="flex items-center">
                   <svg className="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
                   Acesso completo a todos os recursos do Jurema
                 </li>
@@ -186,7 +217,7 @@ export default function Home() {
               <button
                 onClick={() => handleSubscriptionClick('monthly')}
                 className="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-indigo-700 transition duration-300 ease-in-out disabled:opacity-50"
-                disabled={isLoading || !userId}
+                disabled={isPageLoading || isLoading || !userId}
               >
                 {isLoading ? 'Gerando...' : (userId ? 'Assinar Plano Mensal' : 'Faça login para assinar')}
               </button>
@@ -216,7 +247,7 @@ export default function Home() {
               <button
                 onClick={() => handleSubscriptionClick('annual')}
                 className="w-full bg-purple-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-purple-700 transition duration-300 ease-in-out disabled:opacity-50"
-                disabled={isLoading || !userId}
+                disabled={isPageLoading || isLoading || !userId}
               >
                 {isLoading ? 'Gerando...' : (userId ? 'Assinar Plano Anual' : 'Faça login para assinar')}
               </button>
