@@ -2,8 +2,8 @@
 
 import prisma from '@/lib/prisma'
 
-const ABACATE_PAY_API_URL = process.env.ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1'
-const ABACATE_PAY_TOKEN = process.env.ABACATE_API_KEY || ''
+const ABACATE_PAY_API_URL = process.env.NEXT_PUBLIC_ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1'
+const ABACATE_PAY_TOKEN = process.env.NEXT_PUBLIC_ABACATE_API_KEY || ''
 
 interface PixResponse {
   data: {
