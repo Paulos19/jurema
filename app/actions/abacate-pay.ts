@@ -35,10 +35,10 @@ export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: 
         let description: string;
 
         if (planType === 'monthly') {
-            amount = 9700; // R$ 97,00 em centavos
+            amount = 100; // R$ 97,00 em centavos
             description = 'Assinatura Jurema - Plano Mensal';
         } else if (planType === 'annual') {
-            amount = 96000; // R$ 960,00 em centavos
+            amount = 100; // R$ 960,00 em centavos
             description = 'Assinatura Jurema - Plano Anual';
         } else {
             throw new Error('Plano inválido');
