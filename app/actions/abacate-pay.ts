@@ -1,52 +1,21 @@
 'use server'
 
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
-import { addMonths, addYears } from 'date-fns'
 
 const ABACATE_PAY_API_URL = process.env.NEXT_PUBLIC_ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1'
 const ABACATE_PAY_TOKEN = process.env.NEXT_PUBLIC_ABACATE_API_KEY || ''
 
-interface Product {
-    externalId: string
-    name: string
-    description: string;
-    quantity: number;
-    price: number;
-}
-
-interface BillingResponse {
+interface PixResponse {
   data: {
     id: string;
-    url: string;
-    amount: number;
-    status: string;
-    devMode: boolean;
-    methods: string[];
-    products: {
-      id: string;
-      externalId: string;
-      quantity: number;
-    }[];
-    frequency: string;
-    nextBilling: string | null;
-    customer: {
-      id: string;
-      metadata: {
-        name: string;
-        cellphone: string;
-        email: string;
-        taxId: string;
-      };
-    };
-    allowCoupons: boolean;
-    coupons: any[];
+    brCode: string;
+    brCodeBase64: string;
+    expiresAt: string;
   };
   error: any | null;
 }
 
-export async function createSubscription(planType: 'monthly' | 'annual', userId: string) {
+export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: string): Promise<{ qrCodeUrl?: string; brCode?: string; error?: string }> {
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -62,87 +31,65 @@ export async function createSubscription(planType: 'monthly' | 'annual', userId:
             throw new Error('User not found');
         }
 
-        let product: Product;
-        let frequency: string;
+        let amount: number;
+        let description: string;
 
         if (planType === 'monthly') {
-            product = {
-                externalId: 'jurema-monthly-plan',
-                name: 'Plano Jurema Mensal',
-                description: 'Assinatura mensal do Jurema',
-                quantity: 1,
-                price: 100, // R$ 97.00 (in cents)
-            };
-            frequency = 'ONE_TIME';
+            amount = 9700; // R$ 97,00 em centavos
+            description = 'Assinatura Jurema - Plano Mensal';
         } else if (planType === 'annual') {
-            product = {
-                externalId: 'jurema-annual-plan',
-                name: 'Plano Jurema Anual',
-                description: 'Assinatura anual do Jurema',
-                quantity: 1,
-                price: 100, // R$ 960.00 (in cents)
-            };
-            frequency = 'ONE_TIME';
+            amount = 96000; // R$ 960,00 em centavos
+            description = 'Assinatura Jurema - Plano Anual';
         } else {
-            throw new Error('Invalid plan type');
+            throw new Error('Plano inválido');
         }
 
         const body = JSON.stringify({
-            frequency: frequency,
-            methods: ['PIX'], // Assuming these are valid methods for subscription
-            products: [product],
-            returnUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-            completionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirmacao`,
+            amount,
+            expiresIn: 3600, // QR Code expira em 1 hora (3600 segundos)
+            description,
             customer: {
-                name: user.name || user.email, // Use name if available, otherwise email
+                name: user.name || user.email,
                 email: user.email,
                 cellphone: user.whatsapp,
                 taxId: user.cpf,
             },
+            metadata: {
+                externalId: `sub-${userId}-${planType}-${Date.now()}`,
+            },
         });
 
-        const response = await fetch(`${ABACATE_PAY_API_URL}/billing/create`, {
+        const response = await fetch(`${ABACATE_PAY_API_URL}/pixQrCode/create`, {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${ABACATE_PAY_TOKEN}`,
-                'Accept': 'application/json'
             },
             body
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Pagamento falhou: ${errorText}`);
+            console.error('Falha na API Abacate Pay:', errorText);
+            return { error: `Falha ao gerar QR Code: ${errorText}` };
         }
 
-        const data: BillingResponse = await response.json();
+        const data: PixResponse = await response.json();
 
-        // Update user's subscription status and due date
-        let newSubscriptionStatus: 'ACTIVE_MONTHLY' | 'ACTIVE_ANNUAL';
-        let newSubscriptionDueDate: Date;
-
-        if (planType === 'monthly') {
-            newSubscriptionStatus = 'ACTIVE_MONTHLY';
-            newSubscriptionDueDate = addMonths(new Date(), 1);
-        } else { // annual
-            newSubscriptionStatus = 'ACTIVE_ANNUAL';
-            newSubscriptionDueDate = addYears(new Date(), 1);
+        if (data.error) {
+            console.error('Erro retornado pela API Abacate Pay:', data.error);
+            return { error: `Erro da API: ${JSON.stringify(data.error)}` };
         }
-
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                subscriptionStatus: newSubscriptionStatus,
-                subscriptionDueDate: newSubscriptionDueDate,
-            },
-        });
-
-        redirect(data.data.url); // Redirect to Abacate Pay URL
+        
+        // Retorna os dados do QR Code para o frontend
+        return {
+            qrCodeUrl: data.data.brCodeBase64,
+            brCode: data.data.brCode
+        };
 
     } catch (error) {
         console.error(error);
-        // Optionally redirect to an error page or display a message
-        throw error; // Re-throw to be caught by the client-side form handler
+        const errorMessage = error instanceof Error ? error.message : 'Um erro desconhecido ocorreu.';
+        return { error: errorMessage };
     }
 }

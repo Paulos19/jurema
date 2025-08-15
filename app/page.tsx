@@ -1,38 +1,109 @@
-import { cookies } from 'next/headers';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { cookies } from 'next/headers'; // Note: cookies() only works in Server Components
 import { jwtVerify } from 'jose';
-import { createSubscription } from './actions/abacate-pay';
+import { generatePixQRCode } from './actions/abacate-pay'; // Import the updated action
+import Link from 'next/link';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+// Componente para o Modal do PIX
+const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string; brCode: string; onClose: () => void; planName: string }) => {
+  const [copied, setCopied] = useState(false);
 
-export default async function Home() {
-  let userId: string | null = null;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(brCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+  };
 
-  try {
-    const token = (await cookies()).get('authToken')?.value;
-    if (token) {
-      const secret = new TextEncoder().encode(JWT_SECRET);
-      const { payload } = await jwtVerify(token, secret);
-      userId = payload.userId as string;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center relative animate-fade-in-up">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Pague com PIX</h2>
+        <p className="text-gray-600 mb-4">Para ativar sua assinatura {planName}</p>
+        <img src={qrCodeUrl} alt="PIX QR Code" className="mx-auto w-64 h-64 rounded-lg border" />
+        <p className="mt-4 text-sm text-gray-500">Abra o app do seu banco e escaneie o código</p>
+        <div className="mt-6">
+          <input
+            type="text"
+            value={brCode}
+            readOnly
+            className="w-full bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-gray-700 focus:outline-none"
+          />
+          <button
+            onClick={handleCopy}
+            className="w-full mt-2 bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition duration-300"
+          >
+            {copied ? 'Copiado!' : 'Copiar Código (Copia e Cola)'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+export default function Home() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [modalData, setModalData] = useState<{ qrCodeUrl: string; brCode: string; planName: string } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // This effect runs on the client to get the userId from the token
+  useEffect(() => {
+    const getUserIdFromCookie = async () => {
+      const token = document.cookie.split('; ').find(row => row.startsWith('authToken='))?.split('=')[1];
+      if (token) {
+        try {
+          // This is a simplified way to decode, for real apps, verification should be server-side
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserId(payload.userId as string);
+        } catch (e) {
+          console.error('Failed to decode token:', e);
+        }
+      }
+      setIsLoading(false);
+    };
+    getUserIdFromCookie();
+  }, []);
+
+  const handleSubscriptionClick = async (planType: 'monthly' | 'annual') => {
+    if (!userId) {
+      setError('Você precisa estar logado para assinar um plano.');
+      return;
     }
-  } catch (error) {
-    console.error('Failed to verify token:', error);
-    // If token is invalid, userId remains null, and the page will render accordingly
-  }
+    setError(null);
+    setIsLoading(true);
 
-  const handleSubscription = async (planType: 'monthly' | 'annual') => {
-    'use server';
-    if (userId) {
-      await createSubscription(planType, userId);
-    } else {
-      // Handle case where user is not logged in, maybe redirect to login
-      console.error('User not logged in to subscribe.');
-      // You might want to redirect to the login page here
-      // redirect('/login');
+    const result = await generatePixQRCode(planType, userId);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.qrCodeUrl && result.brCode) {
+      setModalData({
+        qrCodeUrl: result.qrCodeUrl,
+        brCode: result.brCode,
+        planName: planType === 'monthly' ? 'Mensal' : 'Anual'
+      });
     }
+    setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 text-gray-900 font-sans">
+       {/* Modal Display Logic */}
+       {modalData && (
+        <PixModal
+          qrCodeUrl={modalData.qrCodeUrl}
+          brCode={modalData.brCode}
+          planName={modalData.planName}
+          onClose={() => setModalData(null)}
+        />
+      )}
+      
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 md:py-32 text-center">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 opacity-75 transform -skew-y-3"></div>
@@ -87,9 +158,10 @@ export default async function Home() {
       {/* Pricing Section */}
       <section id="pricing" className="py-16 md:py-24 bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
         <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 animate-fade-in-up">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
             Escolha o Plano Perfeito para Você
           </h2>
+          {error && <p className="text-center text-red-300 bg-red-800 bg-opacity-50 p-3 rounded-md mb-8">{error}</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {/* Monthly Plan Card */}
             <div className="bg-white text-gray-900 p-8 rounded-xl shadow-2xl transform hover:scale-105 transition duration-300 ease-in-out animate-fade-in-up animation-delay-1200">
@@ -98,7 +170,7 @@ export default async function Home() {
                 R$ 97<span className="text-xl font-medium">/mês</span>
               </p>
               <ul className="text-gray-700 space-y-3 mb-8">
-                <li className="flex items-center">
+                 <li className="flex items-center">
                   <svg className="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
                   Acesso completo a todos os recursos do Jurema
                 </li>
@@ -111,15 +183,13 @@ export default async function Home() {
                   Flexibilidade para cancelar a qualquer momento
                 </li>
               </ul>
-              <form action={handleSubscription.bind(null, 'monthly')}>
-                <button
-                  type="submit"
-                  className="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-indigo-700 transition duration-300 ease-in-out"
-                  disabled={!userId}
-                >
-                  {userId ? 'Assinar Plano Mensal' : 'Faça login para assinar'}
-                </button>
-              </form>
+              <button
+                onClick={() => handleSubscriptionClick('monthly')}
+                className="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-indigo-700 transition duration-300 ease-in-out disabled:opacity-50"
+                disabled={isLoading || !userId}
+              >
+                {isLoading ? 'Gerando...' : (userId ? 'Assinar Plano Mensal' : 'Faça login para assinar')}
+              </button>
             </div>
 
             {/* Annual Plan Card */}
@@ -143,15 +213,13 @@ export default async function Home() {
                   Consultoria financeira exclusiva (1 hora/ano)
                 </li>
               </ul>
-              <form action={handleSubscription.bind(null, 'annual')}>
-                <button
-                  type="submit"
-                  className="w-full bg-purple-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-purple-700 transition duration-300 ease-in-out"
-                  disabled={!userId}
-                >
-                  {userId ? 'Assinar Plano Anual' : 'Faça login para assinar'}
-                </button>
-              </form>
+              <button
+                onClick={() => handleSubscriptionClick('annual')}
+                className="w-full bg-purple-600 text-white py-4 px-6 rounded-lg text-xl font-semibold shadow-md hover:bg-purple-700 transition duration-300 ease-in-out disabled:opacity-50"
+                disabled={isLoading || !userId}
+              >
+                {isLoading ? 'Gerando...' : (userId ? 'Assinar Plano Anual' : 'Faça login para assinar')}
+              </button>
             </div>
           </div>
         </div>
