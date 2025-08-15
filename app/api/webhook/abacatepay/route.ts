@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
   try {
     const event = await req.json()
 
-    // Log e salva o evento para auditoria
     console.log('Received webhook:', JSON.stringify(event, null, 2));
     await prisma.webhookEvent.create({
       data: {
@@ -25,11 +24,12 @@ export async function POST(req: NextRequest) {
     })
 
     // --- LÓGICA DE ATIVAÇÃO DA ASSINATURA ---
+    // A condição agora deve funcionar corretamente
     if (event.event === 'pix.paid' || event.event === 'billing.paid') {
-      const customerTaxId = event.data?.customer?.taxId;
       const metadata = event.data?.metadata;
 
-      if (customerTaxId && metadata?.userId && metadata?.plan) {
+      // Verificamos se os metadados necessários existem
+      if (metadata?.userId && metadata?.plan) {
         const user = await prisma.user.findUnique({ where: { id: metadata.userId } });
 
         if (user) {

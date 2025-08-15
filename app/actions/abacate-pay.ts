@@ -2,8 +2,8 @@
 
 import prisma from '@/lib/prisma'
 
-const ABACATE_PAY_API_URL = process.env.NEXT_PUBLIC_ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1'
-const ABACATE_PAY_TOKEN = process.env.NEXT_PUBLIC_ABACATE_API_KEY || ''
+const ABACATE_PAY_API_URL = process.env.ABACATE_PAY_API_URL || 'https://api.abacatepay.com/v1'
+const ABACATE_PAY_TOKEN = process.env.ABACATE_API_KEY || ''
 
 interface PixResponse {
   data: {
@@ -54,7 +54,12 @@ export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: 
                 cellphone: user.whatsapp,
                 taxId: user.cpf,
             },
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Adicionamos userId e planType aos metadados.
+            // O webhook usará esses dados para identificar o usuário e o plano.
             metadata: {
+                userId: userId,
+                plan: planType, // 'monthly' ou 'annual'
                 externalId: `sub-${userId}-${planType}-${Date.now()}`,
             },
         });
@@ -81,7 +86,6 @@ export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: 
             return { error: `Erro da API: ${JSON.stringify(data.error)}` };
         }
         
-        // Retorna os dados do QR Code para o frontend
         return {
             qrCodeUrl: data.data.brCodeBase64,
             brCode: data.data.brCode
