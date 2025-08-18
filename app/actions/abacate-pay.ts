@@ -15,38 +15,36 @@ interface PixResponse {
   error: any | null;
 }
 
-export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: string): Promise<{ qrCodeUrl?: string; brCode?: string; error?: string }> {
+export async function generatePixQRCode(
+  planType: 'monthly' | 'annual', 
+  userId: string
+): Promise<{ qrCodeUrl?: string; brCode?: string; externalId?: string; error?: string }> { // Adicionado externalId ao retorno
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: {
-                name: true,
-                email: true,
-                cpf: true,
-                whatsapp: true,
-            },
+            select: { name: true, email: true, cpf: true, whatsapp: true },
         });
 
-        if (!user) {
-            throw new Error('User not found');
-        }
+        if (!user) throw new Error('User not found');
 
         let amount: number;
         let description: string;
 
         if (planType === 'monthly') {
-            amount = 100; // R$ 97,00 em centavos
+            amount = 9700;
             description = 'Assinatura Jurema - Plano Mensal';
         } else if (planType === 'annual') {
-            amount = 100; // R$ 960,00 em centavos
+            amount = 96000;
             description = 'Assinatura Jurema - Plano Anual';
         } else {
             throw new Error('Plano inválido');
         }
 
+        const externalId = `sub-${userId}-${planType}-${Date.now()}`;
+
         const body = JSON.stringify({
             amount,
-            expiresIn: 3600, // QR Code expira em 1 hora (3600 segundos)
+            expiresIn: 3600,
             description,
             customer: {
                 name: user.name || user.email,
@@ -54,45 +52,41 @@ export async function generatePixQRCode(planType: 'monthly' | 'annual', userId: 
                 cellphone: user.whatsapp,
                 taxId: user.cpf,
             },
-            // --- CORREÇÃO APLICADA AQUI ---
-            // Adicionamos userId e planType aos metadados.
-            // O webhook usará esses dados para identificar o usuário e o plano.
             metadata: {
                 userId: userId,
-                plan: planType, // 'monthly' ou 'annual'
-                externalId: `sub-${userId}-${planType}-${Date.now()}`,
+                plan: planType,
+                externalId: externalId, // Usamos a variável aqui
             },
         });
 
-        const response = await fetch(`${ABACATE_PAY_API_URL}/pixQrCode/create`, {
+        const response = await fetch(`${process.env.ABACATE_PAY_API_URL}/pixQrCode/create`, {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${ABACATE_PAY_TOKEN}`,
+                'Authorization': `Bearer ${process.env.ABACATE_API_KEY}`,
             },
             body
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Falha na API Abacate Pay:', errorText);
             return { error: `Falha ao gerar QR Code: ${errorText}` };
         }
 
-        const data: PixResponse = await response.json();
+        const data: any = await response.json(); // Usando 'any' para simplificar
 
         if (data.error) {
-            console.error('Erro retornado pela API Abacate Pay:', data.error);
             return { error: `Erro da API: ${JSON.stringify(data.error)}` };
         }
         
+        // Retorna os dados, incluindo o externalId
         return {
             qrCodeUrl: data.data.brCodeBase64,
-            brCode: data.data.brCode
+            brCode: data.data.brCode,
+            externalId: externalId
         };
 
     } catch (error) {
-        console.error(error);
         const errorMessage = error instanceof Error ? error.message : 'Um erro desconhecido ocorreu.';
         return { error: errorMessage };
     }
