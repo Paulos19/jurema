@@ -59,11 +59,11 @@ export async function generatePixQRCode(
             },
         });
 
-        const response = await fetch(`${process.env.ABACATE_PAY_API_URL}/pixQrCode/create`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ABACATE_PAY_API_URL}/pixQrCode/create`, {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.ABACATE_API_KEY}`,
+                'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ABACATE_API_KEY}`,
             },
             body
         });
