@@ -1,4 +1,3 @@
-// paulos19/jurema/jurema-1fae97708a9ea1fb21a85332f666f016246eb9e6/app/api/payment/check-status/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMonths, addYears } from 'date-fns';
@@ -12,29 +11,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'externalId é obrigatório.' }, { status: 400 });
     }
 
-    // 1. Procura por um evento de pagamento bem-sucedido na tabela de webhooks
+    // --- LÓGICA DE BUSCA CORRIGIDA ---
+    // Como o `externalId` pode estar em caminhos diferentes dependendo do evento,
+    // precisamos verificar múltiplos caminhos.
     const paidEvent = await prisma.webhookEvent.findFirst({
       where: {
-        // Verifica eventos de pagamento de PIX ou Fatura
         eventType: { in: ['pix.paid', 'billing.paid'] },
-        // Busca o externalId dentro do objeto JSON do payload
-        payload: {
-          path: ['data', 'metadata', 'externalId'],
-          equals: externalId,
-        },
+        // A consulta agora verifica um array de caminhos possíveis para o `externalId`
+        OR: [
+          {
+            payload: {
+              path: ['data', 'metadata', 'externalId'],
+              equals: externalId,
+            },
+          },
+          {
+            payload: {
+              path: ['data', 'pixQrCode', 'metadata', 'externalId'],
+              equals: externalId,
+            },
+          },
+        ],
       },
     });
 
-    // 2. Se o evento de pagamento for encontrado, ativa a assinatura
+    // O restante da lógica permanece o mesmo, pois uma vez que o evento é encontrado,
+    // a extração dos dados continua válida.
     if (paidEvent) {
       const payload = paidEvent.payload as any;
-      const metadata = payload?.data?.metadata;
-      const customerId = payload?.data?.customer?.id;
+      
+      // Determina o caminho correto para os metadados com base no tipo de evento
+      const metadata = payload?.data?.metadata ?? payload?.data?.pixQrCode?.metadata;
+      const customerId = payload?.data?.customer?.id ?? payload?.data?.pixQrCode?.customer?.id;
 
       if (metadata?.userId && metadata?.plan) {
         const user = await prisma.user.findUnique({ where: { id: metadata.userId } });
 
-        // 3. Garante que o usuário existe e a assinatura ainda está como FREE_TRIAL
         if (user && user.subscriptionStatus === 'FREE_TRIAL') {
           let newSubscriptionStatus: SubscriptionStatus;
           let newSubscriptionDueDate: Date;
@@ -50,7 +62,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ status: 'pending' });
           }
           
-          // 4. ATIVA A ASSINATURA DO USUÁRIO
           await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -61,16 +72,13 @@ export async function POST(request: Request) {
           });
 
           console.log(`Assinatura do usuário ${user.id} ativada via polling para ${newSubscriptionStatus}`);
-          // 5. Retorna o status de sucesso para o frontend
           return NextResponse.json({ status: 'paid' });
         } else if (user) {
-          // Se o usuário já tem outro status, significa que já foi ativado.
           return NextResponse.json({ status: 'paid' });
         }
       }
     }
 
-    // Se nenhum evento de pagamento for encontrado, informa ao frontend que o pagamento está pendente
     return NextResponse.json({ status: 'pending' });
 
   } catch (error) {
