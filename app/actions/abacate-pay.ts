@@ -31,10 +31,10 @@ export async function generatePixQRCode(
         let description: string;
 
         if (planType === 'monthly') {
-            amount = 9700;
+            amount = 100;
             description = 'Assinatura Jurema - Plano Mensal';
         } else if (planType === 'annual') {
-            amount = 96000;
+            amount = 100;
             description = 'Assinatura Jurema - Plano Anual';
         } else {
             throw new Error('Plano inválido');
