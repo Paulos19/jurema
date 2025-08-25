@@ -1,3 +1,4 @@
+// paulos19/jurema/jurema-1fae97708a9ea1fb21a85332f666f016246eb9e6/app/api/payment/check-status/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { addMonths, addYears } from 'date-fns';
@@ -11,10 +12,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'externalId é obrigatório.' }, { status: 400 });
     }
 
-    // Procura por um evento de pagamento bem-sucedido na tabela de webhooks
+    // 1. Procura por um evento de pagamento bem-sucedido na tabela de webhooks
     const paidEvent = await prisma.webhookEvent.findFirst({
       where: {
-        eventType: 'pix.paid', // ou 'billing.paid' se aplicável
+        // Verifica eventos de pagamento de PIX ou Fatura
+        eventType: { in: ['pix.paid', 'billing.paid'] },
+        // Busca o externalId dentro do objeto JSON do payload
         payload: {
           path: ['data', 'metadata', 'externalId'],
           equals: externalId,
@@ -22,8 +25,8 @@ export async function POST(request: Request) {
       },
     });
 
+    // 2. Se o evento de pagamento for encontrado, ativa a assinatura
     if (paidEvent) {
-      // Se o evento de pagamento for encontrado, extraímos os dados para ativar a assinatura
       const payload = paidEvent.payload as any;
       const metadata = payload?.data?.metadata;
       const customerId = payload?.data?.customer?.id;
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
       if (metadata?.userId && metadata?.plan) {
         const user = await prisma.user.findUnique({ where: { id: metadata.userId } });
 
-        // Verifica se o usuário existe e se a assinatura ainda está pendente
+        // 3. Garante que o usuário existe e a assinatura ainda está como FREE_TRIAL
         if (user && user.subscriptionStatus === 'FREE_TRIAL') {
           let newSubscriptionStatus: SubscriptionStatus;
           let newSubscriptionDueDate: Date;
@@ -43,11 +46,11 @@ export async function POST(request: Request) {
             newSubscriptionStatus = 'ACTIVE_ANNUAL';
             newSubscriptionDueDate = addYears(new Date(), 1);
           } else {
-            // Se o plano não for reconhecido, não faz nada
+            console.warn(`Plano inválido "${metadata.plan}" no polling para externalId: ${externalId}`);
             return NextResponse.json({ status: 'pending' });
           }
           
-          // ATIVA A ASSINATURA DO USUÁRIO
+          // 4. ATIVA A ASSINATURA DO USUÁRIO
           await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -58,7 +61,10 @@ export async function POST(request: Request) {
           });
 
           console.log(`Assinatura do usuário ${user.id} ativada via polling para ${newSubscriptionStatus}`);
-          // Retorna o status de sucesso para o frontend
+          // 5. Retorna o status de sucesso para o frontend
+          return NextResponse.json({ status: 'paid' });
+        } else if (user) {
+          // Se o usuário já tem outro status, significa que já foi ativado.
           return NextResponse.json({ status: 'paid' });
         }
       }
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'pending' });
 
   } catch (error) {
-    console.error('Erro ao verificar status do pagamento:', error);
+    console.error('Erro ao verificar status do pagamento via polling:', error);
     return NextResponse.json({ message: 'Erro interno do servidor.' }, { status: 500 });
   }
 }

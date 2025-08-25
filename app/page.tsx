@@ -5,24 +5,30 @@ import { useRouter } from 'next/navigation';
 import { generatePixQRCode } from './actions/abacate-pay'; // Importa a action atualizada
 
 // Componente para o Modal do PIX com lógica de Polling
-const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string; brCode: string; onClose: () => void; planName: string }) => {
+const PixModal = ({ qrCodeUrl, brCode, onClose, planName, externalId }: { qrCodeUrl: string; brCode: string; onClose: () => void; planName: string; externalId: string; }) => {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     // Função que verifica o status do pagamento
     const checkPaymentStatus = async () => {
-      console.log('Verificando status do pagamento...');
+      console.log(`Verificando status do pagamento para externalId: ${externalId}`);
       try {
-        const response = await fetch('/api/user/subscription-status');
+        const response = await fetch('/api/payment/check-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ externalId }),
+        });
         
         if (response.ok) {
-          const { subscriptionStatus } = await response.json();
-          // Se a assinatura estiver ativa, o pagamento foi confirmado
-          if (subscriptionStatus === 'ACTIVE_MONTHLY' || subscriptionStatus === 'ACTIVE_ANNUAL') {
-            console.log('Pagamento confirmado! Redirecionando...');
+          const { status } = await response.json();
+          // Se a API retornar que o pagamento foi concluído
+          if (status === 'paid') {
+            console.log('Pagamento confirmado via polling! Redirecionando...');
             clearInterval(intervalId); // Para o polling
             router.push('/confirmacao'); // Redireciona para a página de confirmação
+          } else {
+            console.log('Pagamento ainda pendente...');
           }
         }
       } catch (error) {
@@ -35,7 +41,7 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
 
     // Limpa o intervalo quando o modal for fechado (componente desmontado)
     return () => clearInterval(intervalId);
-  }, [router]);
+  }, [router, externalId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(brCode);
@@ -51,7 +57,8 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
         </button>
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Pague com PIX</h2>
         <p className="text-gray-600 mb-4">Para ativar sua assinatura {planName}</p>
-        <img src={qrCodeUrl} alt="PIX QR Code" className="mx-auto w-64 h-64 rounded-lg border" />
+        {/* A API da AbacatePay retorna a imagem em base64, então precisamos formatar o src corretamente */}
+        <img src={`${qrCodeUrl}`} alt="PIX QR Code" className="mx-auto w-64 h-64 rounded-lg border" />
         <div className="mt-6">
           <input
             type="text"
@@ -81,7 +88,7 @@ const PixModal = ({ qrCodeUrl, brCode, onClose, planName }: { qrCodeUrl: string;
 
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
-  const [modalData, setModalData] = useState<{ qrCodeUrl: string; brCode: string; planName: string } | null>(null);
+  const [modalData, setModalData] = useState<{ qrCodeUrl: string; brCode: string; planName: string; externalId: string; } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,11 +121,12 @@ export default function Home() {
 
     if (result.error) {
       setError(result.error);
-    } else if (result.qrCodeUrl && result.brCode) {
+    } else if (result.qrCodeUrl && result.brCode && result.externalId) {
       setModalData({
         qrCodeUrl: result.qrCodeUrl,
         brCode: result.brCode,
-        planName: planType === 'monthly' ? 'Mensal' : 'Anual'
+        planName: planType === 'monthly' ? 'Mensal' : 'Anual',
+        externalId: result.externalId
       });
     }
     setIsLoading(false);
@@ -128,9 +136,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 text-gray-900 font-sans">
        {modalData && (
         <PixModal
-          qrCodeUrl={modalData.qrCodeUrl}
-          brCode={modalData.brCode}
-          planName={modalData.planName}
+          {...modalData}
           onClose={() => setModalData(null)}
         />
       )}
